@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+  ::selection {
+    @apply bg-aqua text-ink;
+  }
+  /* Foco visible para navegación con teclado */
+  :focus-visible {
+    outline: 3px solid theme('colors.ink.DEFAULT');
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+}
+
+/* Respeta la preferencia del sistema: sin animaciones. Los elementos quedan en su estado final. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,9 @@
+node_modules
+.next
+.env
+.env.local
+storage/
+.emails/
+*.tsbuildinfo
+next-env.d.ts
+.next-test

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Base de datos real para las pruebas de cobros
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pro
+          POSTGRES_PASSWORD: pro
+          POSTGRES_DB: profesionalesok
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U pro -d profesionalesok"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pro:pro@localhost:5432/profesionalesok
+      MP_WEBHOOK_SECRET: clave-de-prueba-ci
+      NEXT_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tipos (TypeScript)
+        run: npm run typecheck
+
+      - name: Crear tablas
+        run: npm run db:push
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Pruebas (validación de matrículas + cobros de punta a punta)
+        run: npm test

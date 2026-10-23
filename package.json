@@ -1,0 +1,44 @@
+{
+  "name": "profesionalesok",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "db:push": "drizzle-kit push --force",
+    "db:seed": "tsx scripts/seed.ts",
+    "setup": "tsx scripts/check-db.ts && npm run db:push && npm run db:seed",
+    "test:webhook": "tsx scripts/test-webhook.ts",
+    "db:check": "tsx scripts/check-db.ts",
+    "matricula:probar": "tsx scripts/matricula-probar.ts",
+    "test:matricula": "tsx scripts/test-matricula.ts",
+    "test": "npm run test:matricula && npm run test:webhook"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.0",
+    "lucide-react": "^1.49.0",
+    "next": "15.5.27",
+    "pg": "^8.13.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.34.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.31.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "3.4.19",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}
