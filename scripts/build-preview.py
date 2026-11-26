@@ -39,9 +39,9 @@ REWRITE = """() => {
 CAPTURE = "() => { (%s)(); return document.querySelector('main#contenido').innerHTML; }" % REWRITE
 
 
-def fill_step1(pg, prov='Santa Fe', lic='1234'):
+def fill_step1(pg, prov='Santa Fe', lic='1234', last='Gómez'):
     pg.goto(BASE + '/asociar'); pg.wait_for_load_state('networkidle')
-    pg.fill('input[autocomplete="given-name"]', 'Ana María'); pg.fill('input[autocomplete="family-name"]', 'Gómez')
+    pg.fill('input[autocomplete="given-name"]', 'Ana María'); pg.fill('input[autocomplete="family-name"]', last)
     pg.fill('input[type=email]', 'ana@example.com'); pg.fill('input[type=tel]', '3482 440552')
     pg.locator('main input').nth(4).fill(lic)
     pg.locator('main select').nth(0).select_option(label=prov)
@@ -148,6 +148,12 @@ def main():
             dlg['result_bad'] = dialog_html(pg)
             assert 'No pudimos verificar' in dlg['result_bad'], 'una matrícula inexistente no se bloqueó'
 
+            fill_step1(pg, lic='1234', last='Pérez')
+            pg.get_by_role('button', name='Continuar').click(); pg.wait_for_timeout(300)
+            pg.get_by_role('button', name='Entendido').click(); pg.wait_for_timeout(2500)
+            dlg['result_mismatch'] = dialog_html(pg)
+            assert 'nombre o el apellido no coinciden' in dlg['result_mismatch'], 'un nombre distinto no se bloqueó'
+
             fill_step1(pg, prov='Córdoba', lic='555')
             pg.get_by_role('button', name='Continuar').click(); pg.wait_for_timeout(300)
             dlg['notice_other'] = dialog_html(pg)
@@ -162,13 +168,14 @@ def main():
         sections = ''.join(f'<section data-page="{k}"{"" if k == "home" else " hidden"}>{v}</section>' for k, v in pages.items())
         tag = ('<div id="pv-tag" style="position:fixed;left:12px;bottom:12px;z-index:60;border-radius:999px;background:#fff;border:1px solid rgba(8,34,32,.18);'
                'color:#082220;padding:6px 12px;font:500 12px/1.3 Poppins,system-ui,sans-serif;max-width:calc(100vw - 150px)">'
-               'Vista previa de diseño · datos de ejemplo · probá la matrícula 1234 (Santa Fe)</div><div id="pv-note" role="status" aria-live="polite"></div>')
+               'Vista previa de diseño · datos de ejemplo · la matrícula se verifica con la lista real</div><div id="pv-note" role="status" aria-live="polite"></div>')
         html = ('<!doctype html><html lang="es-AR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
                 '<title>ProfesionalesOk · vista previa</title><style>' + css + extra_css + '</style>'
                 '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
                 '<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Bebas+Neue&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">'
                 '</head><body>'
                 f'<div id="pv" class="{chrome["cls"]}">{chrome["header"]}<main id="contenido" class="flex-1">{sections}</main>{chrome["footer"]}{chrome["wa"]}{tag}</div>'
+                '<script type="application/json" id="pv-data">' + (ROOT / 'data/matriculados.json').read_text(encoding='utf-8').replace('</', '<\\/') + '</script>'
                 '<script type="application/json" id="pv-dlg">' + json.dumps(dlg, ensure_ascii=False).replace('</', '<\\/') + '</script>'
                 '<script>' + (ROOT / 'scripts/preview.js').read_text() + '</script></body></html>')
         (ROOT / 'index.html').write_text(html, encoding='utf-8')

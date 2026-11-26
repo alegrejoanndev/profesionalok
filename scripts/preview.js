@@ -61,11 +61,27 @@
   }
 
   /* ---------- alta: cartel de verificación (simula el padrón del Colegio) ---------- */
-  var KNOWN={'1234':'ok','777':'baja'};
+  /* La vista previa verifica contra la misma lista de matriculados que usa el sitio real */
+  var LISTA=null,STOP={de:1,del:1,la:1,las:1,los:1,y:1,e:1};
+  function lic(v){v=(v||'').toUpperCase().replace(/[^0-9A-Z]/g,'');return /^\d+$/.test(v)?v.replace(/^0+(?=\d)/,''):v.replace(/^R0+(?=\d)/,'R')}
+  function toks(s){return norm(s).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(function(t){return t&&!STOP[t]})}
+  function cargarLista(){
+    if(LISTA)return LISTA;LISTA={};
+    var el=document.getElementById('pv-data'),rows=[];try{rows=JSON.parse(el.textContent)}catch(e){}
+    rows.forEach(function(r){var k=lic(r[0]);(LISTA[k]=LISTA[k]||[]).push(r[1])});
+    return LISTA;
+  }
+  function verificar(d){
+    var m=cargarLista(),k=lic(d.lic),rows=m[k]||(/^\d+$/.test(k)?m['R'+k]:null)||[];
+    if(!rows.length)return 'bad';
+    var last=toks(d.last),first=toks(d.first);
+    var ok=last.length&&first.length&&rows.some(function(n){var t=toks(n);return last.every(function(x){return t.indexOf(x)>=0})&&first.some(function(x){return t.indexOf(x)>=0})});
+    return ok?'ok':'mismatch';
+  }
   function datos(){
     var p=page('asociar'),inputs=[].slice.call(p.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file])'));
     var sel=p.querySelector('select');
-    return {lic:(inputs[4]&&inputs[4].value||'').replace(/\D/g,'').replace(/^0+/,''),prov:sel?sel.value:''};
+    return {first:inputs[0]?inputs[0].value:'',last:inputs[1]?inputs[1].value:'',lic:inputs[4]?inputs[4].value:'',prov:sel?sel.value:''};
   }
   function esSantaFe(prov){return norm(prov).indexOf('santa fe')===0}
   function openDialog(){
@@ -75,7 +91,8 @@
   }
   function resultDialog(){
     var x=datos();
-    return KNOWN[x.lic]==='ok'?DLG.result_ok:DLG.result_bad;
+    var r=verificar(x);
+    return r==='ok'?DLG.result_ok:r==='mismatch'?DLG.result_mismatch:DLG.result_bad;
   }
 
   /* ---------- alta: "agregar otra" (especialidades, corrientes, obras sociales) ---------- */

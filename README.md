@@ -230,7 +230,7 @@ Este repositorio todavía no tiene una licencia: por defecto, **todos los derech
 
 ## Vista previa en GitHub Pages
 
-`index.html` (en la raíz) es una **vista previa estática** del diseño con datos de ejemplo: sirve para mirar el sitio desde GitHub Pages, pero los formularios están simulados (la matrícula `1234` de Santa Fe simula una verificación correcta). El sitio real necesita un servidor (`npm run dev`, o Vercel + Neon). Para regenerarla después de cambiar el diseño:
+`index.html` (en la raíz) es una **vista previa estática** del diseño con datos de ejemplo: sirve para mirar el sitio desde GitHub Pages, pero los formularios están simulados (la verificación de matrícula sí usa la lista real de `data/matriculados.json`, incluida dentro del archivo). El sitio real necesita un servidor (`npm run dev`, o Vercel + Neon). Para regenerarla después de cambiar el diseño:
 
 ```bash
 npx next build
