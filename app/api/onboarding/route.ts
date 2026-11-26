@@ -9,7 +9,7 @@ import { gateResponse, isBlocking } from '@/lib/matricula-gate';
 import { makeSlug } from '@/lib/professionals';
 import { getProfession } from '@/lib/professions';
 import { clientIp, rateLimit } from '@/lib/ratelimit';
-import { savePhoto, saveTitle } from '@/lib/storage';
+import { savePhoto } from '@/lib/storage';
 import { TERMS_VERSION } from '@/lib/site';
 import { applyMatriculaResult } from '@/lib/verification';
 import { FILE_LIMITS, normalizeArPhone, onboardingSchema } from '@/lib/validation';
@@ -61,20 +61,14 @@ export async function POST(req: NextRequest) {
     return fail('Revisá los datos marcados.', 400, { fieldErrors: { dni: 'Ingresá tu DNI o tu CUIT para verificar tu matrícula' } });
   }
 
-  // 2) Archivos. La foto es OPCIONAL (sin foto, el perfil muestra el logo); el título es obligatorio.
+  // 2) Archivos. La foto es OPCIONAL (sin foto, el perfil muestra el logo). Ya no se pide el título.
   const photo = form.get('photo');
-  const title = form.get('title');
   const hasPhoto = photo instanceof File && photo.size > 0;
-  if (!(title instanceof File) || title.size === 0) return fail('Falta la foto o el PDF de tu título.');
   if (hasPhoto && photo.size > FILE_LIMITS.photo.maxBytes) return fail('La foto pesa más de 8 MB.');
-  if (title.size > FILE_LIMITS.title.maxBytes) return fail('El archivo del título pesa más de 8 MB.');
 
   const photoBuf = hasPhoto ? Buffer.from(await photo.arrayBuffer()) : null;
-  const titleBuf = Buffer.from(await title.arrayBuffer());
   const photoKind = photoBuf ? await sniff(photoBuf) : null;
-  const titleKind = await sniff(titleBuf);
   if (photoBuf && (!photoKind || photoKind === 'pdf')) return fail('La foto de perfil tiene que ser una imagen JPG, PNG o WebP.');
-  if (!titleKind) return fail('El título tiene que ser una imagen (JPG, PNG, WebP) o un PDF.');
 
   // 3) Matrícula principal y adicionales
   const prof = getProfession(v.profession)!;
@@ -133,13 +127,11 @@ export async function POST(req: NextRequest) {
   // 6) Guardar archivos y perfil
   const id = byEmail?.id ?? crypto.randomUUID();
   let photoUrl: string | null = null;
-  let titleDocPath: string;
   try {
     if (photoBuf) photoUrl = await savePhoto(id, photoBuf);
-    titleDocPath = await saveTitle(id, titleBuf, titleKind);
   } catch (err) {
     console.error('[onboarding] no se pudieron guardar los archivos', err);
-    return fail('No pudimos procesar tus archivos. Probá con otra foto o con un archivo más liviano.', 422);
+    return fail('No pudimos procesar tu foto. Probá con otra o con un archivo más liviano.', 422);
   }
 
   const values = {
@@ -160,7 +152,10 @@ export async function POST(req: NextRequest) {
     modalidad: v.modalidad,
     obrasSociales: [...new Set(v.obrasSociales)],
     photoUrl: photoUrl ?? byEmail?.photoUrl ?? null, // sin foto nueva se conserva la anterior (si había)
-    titleDocPath,
+    whatsapp: v.whatsapp ? normalizeArPhone(v.whatsapp) : null,
+    instagram: v.instagram || null,
+    facebook: v.facebook || null,
+    linkedin: v.linkedin || null,
     verificationStatus: 'PENDING' as const,
     termsAcceptedAt: new Date(),
     termsVersion: TERMS_VERSION,

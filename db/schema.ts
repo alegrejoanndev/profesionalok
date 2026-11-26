@@ -67,6 +67,12 @@ export const professionals = pgTable(
     province: text('province').notNull(),
     bio: text('bio'),
 
+    // Redes y contacto opcionales (se muestran en la tarjeta del perfil). Siempre enlaces https a la red correspondiente.
+    whatsapp: text('whatsapp'), // solo dígitos, formato internacional; si falta se usa `phone`
+    instagram: text('instagram'),
+    facebook: text('facebook'),
+    linkedin: text('linkedin'),
+
     // Cómo y a quién atiende (todo se muestra en el perfil y alimenta los filtros del buscador)
     specialties: jsonb('specialties').$type<string[]>().notNull().default(sql`'[]'::jsonb`), // varias por profesional
     corrientes: jsonb('corrientes').$type<string[]>().notNull().default(sql`'[]'::jsonb`), // orientaciones (Psicología)

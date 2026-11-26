@@ -1,10 +1,12 @@
 import { BadgeCheck, HeartHandshake, MapPin, MessageCircle, Users, Video } from 'lucide-react';
 import { Avatar } from './Avatar';
+import { SocialIcon } from './SocialIcons';
 import type { Tone } from '@/lib/colors';
 import { ageLabel, modalityLabel } from '@/lib/catalog';
 import { LICENSE_SHORT, getProfession } from '@/lib/professions';
 import type { PublicProfessional } from '@/lib/professionals';
 import { SITE } from '@/lib/site';
+import { SOCIALS } from '@/lib/socials';
 
 const MAX_CHIPS = 3;
 const MAX_OBRAS = 3;
@@ -12,12 +14,13 @@ const MAX_OBRAS = 3;
 export function ProfessionalCard({ p, tone = 'aqua' }: { p: PublicProfessional; tone?: Tone }) {
   const fullName = `${p.firstName} ${p.lastName}`;
   const professionLabel = getProfession(p.profession)?.label ?? p.profession;
-  const whatsapp = `https://wa.me/${p.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
+  const whatsapp = `https://wa.me/${(p.whatsapp ?? p.phone).replace(/\D/g, '')}?text=${encodeURIComponent(
     `Hola ${p.firstName}, te encontré en ${SITE.name} y quisiera consultarte por un turno.`,
   )}`;
   const chips = [...p.specialties, ...p.corrientes];
   const ages = AGE_ORDER.filter((a) => p.ageGroups.includes(a)).map(ageLabel);
   const obras = p.obrasSociales.slice(0, MAX_OBRAS);
+  const redes = SOCIALS.filter((s) => p[s.kind]);
 
   return (
     <article className="group flex h-full flex-col rounded-[28px] border border-ink/10 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-ink/25 hover:shadow-[0_18px_40px_-24px_rgba(8,34,32,.5)]">
@@ -89,6 +92,23 @@ export function ProfessionalCard({ p, tone = 'aqua' }: { p: PublicProfessional; 
       </dl>
 
       <div className="mt-auto pt-6">
+        {redes.length > 0 && (
+          <ul className="mb-3 flex items-center gap-2" aria-label="Redes sociales">
+            {redes.map((s) => (
+              <li key={s.kind}>
+                <a
+                  href={p[s.kind]!}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="grid h-9 w-9 place-items-center rounded-full border border-ink/15 transition duration-200 hover:border-transparent hover:bg-lavender"
+                >
+                  <SocialIcon kind={s.kind} />
+                  <span className="sr-only">{s.label} de {fullName}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
         <a
           href={whatsapp}
           target="_blank"

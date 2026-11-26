@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react';
-import { ArrowLeft, ArrowRight, BadgeCheck, CreditCard, FileText, Loader2, Lock, ShieldAlert, ShieldCheck, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, CreditCard, Loader2, ShieldAlert, ShieldCheck, Trash2, Upload, X } from 'lucide-react';
 import { Avatar } from './Avatar';
+import { SocialIcon } from './SocialIcons';
 import { Seal } from './Seal';
 import {
   AGE_GROUPS, LOCALITY_SUGGESTIONS, MODALITIES, OBRAS_SOCIALES, ageLabel, approachesFor, cleanCustomOption, modalityLabel, specialtiesFor,
 } from '@/lib/catalog';
 import { DEFAULT_PROFESSION, getProfession } from '@/lib/professions';
+import { SOCIALS } from '@/lib/socials';
 import { FILE_LIMITS, PROVINCES, onboardingSchema } from '@/lib/validation';
 
 type Values = {
@@ -17,6 +19,10 @@ type Values = {
   lastName: string;
   email: string;
   phone: string;
+  whatsapp: string;
+  instagram: string;
+  facebook: string;
+  linkedin: string;
   profession: string;
   licenses: Record<string, string>;
   licenseProvince: string;
@@ -34,21 +40,20 @@ type Errors = Record<string, string>;
 
 const EMPTY: Values = {
   firstName: '', lastName: '', email: '', phone: '', profession: DEFAULT_PROFESSION,
-  licenses: {}, licenseProvince: 'Santa Fe', city: '', province: 'Santa Fe', bio: '', dni: '',
+  licenses: {}, licenseProvince: 'Santa Fe', city: '', province: 'Santa Fe', bio: '', dni: '', whatsapp: '', instagram: '', facebook: '', linkedin: '',
   specialties: [], corrientes: [], ageGroups: [], modalidad: '', obrasSociales: [],
 };
 
-const STEPS = ['Tus datos', 'Documentación', 'Suscripción'] as const;
+const STEPS = ['Tus datos', 'Foto y redes', 'Suscripción'] as const;
+
+/** Campos del paso 2: sus errores se muestran ahí y no frenan el paso 1. */
+const STEP2_FIELDS = ['whatsapp', 'instagram', 'facebook', 'linkedin'];
 
 const input =
   'w-full rounded-2xl border border-ink/20 bg-white px-4 py-3 text-base outline-none transition focus:border-ink focus:ring-4 focus:ring-aqua/40 aria-[invalid=true]:border-[#B4125A]';
 const errText = 'mt-1.5 block text-sm font-medium text-[#B4125A]';
 const chipBase =
   'inline-block cursor-pointer select-none rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-medium transition duration-200 hover:border-ink/40 peer-checked:border-ink peer-checked:bg-lime peer-focus-visible:outline peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2';
-
-const TITLE_TYPES: Record<string, string> = {
-  pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
-};
 
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
@@ -66,7 +71,7 @@ async function squareResize(file: File): Promise<File> {
   return new File([blob], 'perfil.jpg', { type: 'image/jpeg' });
 }
 
-function Field({ name, label, hint, error, children }: { name: string; label: string; hint?: string; error?: string; children: React.ReactNode }) {
+function Field({ name, label, hint, error, children }: { name: string; label: React.ReactNode; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="block">
@@ -262,7 +267,6 @@ export function OnboardingForm({
   const [errors, setErrors] = useState<Errors>({});
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [title, setTitle] = useState<File | null>(null);
   const [accept, setAccept] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -322,7 +326,7 @@ export function OnboardingForm({
   function validateStep1(): boolean {
     const r = onboardingSchema.safeParse({ ...v, acceptTerms: true });
     const next: Errors = {};
-    if (!r.success) for (const i of r.error.issues) next[i.path.join('.')] ??= i.message;
+    if (!r.success) for (const i of r.error.issues) if (!STEP2_FIELDS.includes(String(i.path[0]))) next[i.path.join('.')] ??= i.message;
     if (needsDni && !v.dni.trim()) next.dni ??= 'Ingresá tu DNI o tu CUIT para verificar tu matrícula';
     setErrors(next);
     if (Object.keys(next).length > 0) {
@@ -334,12 +338,14 @@ export function OnboardingForm({
 
   function validateStep2(): boolean {
     const next: Errors = {};
-    // La foto es opcional: si falta, el perfil muestra el logo
-    if (!title) next.title = 'Subí la foto o el PDF de tu título';
-    else if (title.size > FILE_LIMITS.title.maxBytes) next.title = `El archivo pesa ${mb(title.size)}. El máximo es 8 MB.`;
-    else if (!(FILE_LIMITS.title.types as readonly string[]).includes(title.type)) next.title = 'Usá una imagen JPG, PNG, WebP o un PDF';
+    // La foto es opcional: si falta, el perfil muestra el logo. Las redes también son opcionales, pero si se completan deben ser válidas.
+    const r = onboardingSchema.safeParse({ ...v, acceptTerms: true });
+    if (!r.success) for (const i of r.error.issues) if (STEP2_FIELDS.includes(String(i.path[0]))) next[i.path.join('.')] ??= i.message;
     if (!accept) next.acceptTerms = 'Tenés que aceptar los términos para continuar';
     setErrors(next);
+    if (Object.keys(next).length > 0) {
+      requestAnimationFrame(() => document.querySelector('[aria-invalid="true"], [id^="err-"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+    }
     return Object.keys(next).length === 0;
   }
 
@@ -413,37 +419,12 @@ export function OnboardingForm({
     }
   }
 
-  /** Valida y guarda el archivo del título (por el selector o por arrastrar y soltar). */
-  function chooseTitle(f: File | undefined) {
-    if (!f) return;
-    // Algunos navegadores y celulares no informan el tipo: se deduce por la extensión
-    const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
-    const byExt = TITLE_TYPES[ext];
-    const allowed = FILE_LIMITS.title.types as readonly string[];
-    const type = allowed.includes(f.type) ? f.type : byExt ?? f.type;
-    if (/^image\/hei[cf]$/.test(f.type) || ext === 'heic' || ext === 'heif') {
-      return setErrors((p) => ({ ...p, title: 'Las fotos en formato HEIC no se pueden usar. Sacá una captura de pantalla o guardala como JPG o PDF.' }));
-    }
-    if (!allowed.includes(type)) return setErrors((p) => ({ ...p, title: 'Usá una imagen JPG, PNG, WebP o un PDF' }));
-    if (f.size > FILE_LIMITS.title.maxBytes) return setErrors((p) => ({ ...p, title: `El archivo pesa ${mb(f.size)}. El máximo es 8 MB.` }));
-    if (f.size === 0) return setErrors((p) => ({ ...p, title: 'El archivo está vacío. Probá con otro.' }));
-    setTitle(type === f.type ? f : new File([f], f.name, { type }));
-    clearError('title');
-  }
-
-  function onTitle(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    chooseTitle(f);
-    e.target.value = ''; // permite volver a elegir el mismo archivo
-  }
-
   async function pay() {
     setSubmitting(true);
     setServerError('');
     const fd = new FormData();
     fd.set('data', JSON.stringify({ ...v, acceptTerms: accept }));
     if (photo) fd.set('photo', photo);
-    fd.set('title', title!);
     try {
       const res = await fetch('/api/onboarding', { method: 'POST', body: fd });
       const json = await res.json().catch(() => ({}));
@@ -487,7 +468,7 @@ export function OnboardingForm({
       <div className="rounded-[32px] border border-ink/10 bg-white p-6 sm:p-9">
         <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-2xl font-semibold outline-none">
           {step === 0 && 'Contanos quién sos'}
-          {step === 1 && 'Subí tu título y, si querés, tu foto'}
+          {step === 1 && 'Sumá tu foto y tus redes'}
           {step === 2 && (trialMonths > 0 ? `Empezá tus ${trialLabel} gratis` : 'Activá tu suscripción mensual')}
         </h2>
 
@@ -664,35 +645,31 @@ export function OnboardingForm({
             </div>
 
             <div>
-              <p className="mb-3 text-sm font-medium">Título profesional</p>
-              {title ? (
-                <div className="flex items-center gap-3 rounded-2xl border border-ink/15 p-4">
-                  <FileText className="h-6 w-6 shrink-0" strokeWidth={1.5} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{title.name}</p>
-                    <p className="text-sm text-ink-soft">{mb(title.size)}</p>
-                  </div>
-                  <button type="button" onClick={() => setTitle(null)} aria-label="Quitar archivo del título" className="grid h-10 w-10 place-items-center rounded-full transition hover:bg-pink/20">
-                    <Trash2 className="h-5 w-5" />
-                  </button>
-                </div>
-              ) : (
-                <label
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => { e.preventDefault(); chooseTitle(e.dataTransfer.files?.[0]); }}
-                  className="flex cursor-pointer flex-col items-center gap-2 rounded-[24px] border-2 border-dashed border-ink/25 px-6 py-9 text-center transition hover:border-ink hover:bg-mint/40 focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2"
-                >
-                  <Upload className="h-7 w-7" strokeWidth={1.5} />
-                  <span className="font-semibold">Elegí una foto o un PDF de tu título</span>
-                  <span className="text-sm text-ink-soft">JPG, PNG, WebP o PDF · hasta 8 MB</span>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf,.jpg,.jpeg,.png,.webp" className="sr-only" onChange={onTitle} />
-                </label>
-              )}
-              {errors.title && <span className={errText}>{errors.title}</span>}
-              <p className="mt-3 flex items-start gap-2 text-sm text-ink-soft">
-                <Lock className="mt-0.5 h-4 w-4 shrink-0" />
-                Tu título es privado: solo lo ve el equipo para verificar tu matrícula. No se muestra en el sitio.
+              <p className="text-sm font-medium">Redes y contacto <span className="font-normal text-ink-soft">(opcional)</span></p>
+              <p className="mt-1 max-w-[60ch] text-sm text-ink-soft">
+                Se muestran en tu perfil para que te encuentren y te escriban. Podés escribir el enlace o solo tu usuario.
               </p>
+              <div className="mt-4 grid gap-5 sm:grid-cols-2">
+                <Field
+                  error={errors.whatsapp}
+                  name="whatsapp"
+                  label="WhatsApp"
+                  hint="Si lo dejás vacío, usamos el teléfono que cargaste."
+                >
+                  <input className={input} inputMode="tel" autoComplete="off" placeholder="3482 440552" value={v.whatsapp} onChange={(e) => set('whatsapp', e.target.value)} {...aria('whatsapp')} />
+                </Field>
+                {SOCIALS.map((s) => (
+                  <Field
+                    key={s.kind}
+                    error={errors[s.kind]}
+                    name={s.kind}
+                    label={<span className="inline-flex items-center gap-2"><SocialIcon kind={s.kind} />{s.label}</span>}
+                    hint={s.hint}
+                  >
+                    <input className={input} autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder={s.placeholder} value={v[s.kind]} onChange={(e) => set(s.kind, e.target.value)} {...aria(s.kind)} />
+                  </Field>
+                ))}
+              </div>
             </div>
 
             <div>

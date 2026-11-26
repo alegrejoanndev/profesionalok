@@ -155,7 +155,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
                 <dl className="flex w-full flex-wrap gap-2 text-xs font-semibold">
                   <div className={`rounded-full px-3 py-1.5 ${p.verificationStatus === 'APPROVED' ? 'bg-lime' : p.verificationStatus === 'REJECTED' ? 'bg-pink/30' : 'bg-lavender'}`}>
-                    <dt className="sr-only">Título</dt><dd>Título: {p.verificationStatus}</dd>
+                    <dt className="sr-only">Verificación</dt><dd>Verificación: {p.verificationStatus}</dd>
                   </div>
                   <div className={`rounded-full px-3 py-1.5 ${p.status === 'ACTIVE' ? 'bg-aqua' : 'bg-ash'}`}>
                     <dt className="sr-only">Perfil</dt><dd>Perfil: {p.status}{p.inactiveReason ? ` (${p.inactiveReason})` : ''}</dd>
@@ -178,9 +178,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-ink/10 pt-4">
                 {p.titleDocPath ? (
                   <a href={`/admin/titulo/${p.id}`} target="_blank" rel="noopener" className={`${btn} inline-flex items-center gap-1.5 bg-ink text-white hover:bg-ink-soft`}>
-                    Ver título <ExternalLink className="h-3.5 w-3.5" />
+                    Ver título (alta anterior) <ExternalLink className="h-3.5 w-3.5" />
                   </a>
-                ) : <span className="text-sm text-ink-soft">Sin título cargado</span>}
+                ) : null}
 
                 {p.verificationStatus !== 'APPROVED' && (
                   <form action={approve}><input type="hidden" name="id" value={p.id} />

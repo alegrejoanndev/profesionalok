@@ -8,9 +8,9 @@ import { validateMatricula, type MatriculaInput, type MatriculaResult } from './
  * Aplica el resultado de la validación de matrícula a un perfil.
  *
  * Reglas (la validación automática SOLO puede aprobar, nunca rechazar):
- *  - VERIFIED y el título está pendiente  → se aprueba solo (verificationMethod = AUTO_REFEPS) si la
- *    identidad se confirmó por DNI (política "dni", por defecto), salvo que una persona lo haya
- *    rechazado antes. MATRICULA_AUTO_APPROVE: "dni" | "always" (también por nombre + matrícula) | "never".
+ *  - VERIFIED y la verificación está pendiente → se aprueba solo (verificationMethod = AUTO_REFEPS) si la
+ *    identidad se confirmó por DNI o por la lista del Colegio (política "dni", por defecto), salvo que una
+ *    persona lo haya rechazado antes. MATRICULA_AUTO_APPROVE: "dni" | "always" (también REFEPS por nombre + matrícula) | "never" (todo manual).
  *  - NOT_ENABLED en un perfil ya aprobado (revalidación) → se oculta (LICENSE_INVALID) y vuelve a
  *    revisión manual. El sistema de cobros no lo reactiva.
  *  - VERIFIED en un perfil suspendido por LICENSE_INVALID → se reactiva.
@@ -40,7 +40,8 @@ export async function applyMatriculaResult(professionalId: string, result: Matri
   };
 
   const policy = (process.env.MATRICULA_AUTO_APPROVE ?? 'dni').toLowerCase();
-  const strongIdentity = result.method === 'dni' || result.method === 'code' || result.method === 'mock';
+  // La lista del Colegio (nombre + matrícula) alcanza para aprobar solo: ya no se pide el título.
+  const strongIdentity = result.method === 'dni' || result.method === 'code' || result.method === 'mock' || result.source === 'CPSF';
   const autoApprove = policy === 'always' || (policy === 'dni' && strongIdentity);
   let outcome: 'recorded' | 'auto_approved' | 'suspended' | 'reactivated' = 'recorded';
   let extra: Partial<typeof professionals.$inferInsert> = {};

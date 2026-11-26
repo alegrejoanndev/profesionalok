@@ -11,10 +11,10 @@ const api = () => process.env.MP_API_URL ?? 'https://api.mercadopago.com';
 export const isMockMode = () =>
   process.env.MP_MODE === 'mock' && (process.env.NODE_ENV !== 'production' || process.env.ALLOW_MP_MOCK === '1');
 
-/** Meses de prueba gratis que se ofrecen (TRIAL_MONTHS, por defecto 3; 0 = sin prueba). */
+/** Meses de prueba gratis que se ofrecen (TRIAL_MONTHS, por defecto 1; 0 = sin prueba). */
 export const trialMonths = () => {
-  const n = Math.floor(Number(process.env.TRIAL_MONTHS ?? '3'));
-  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 12) : 3;
+  const n = Math.floor(Number(process.env.TRIAL_MONTHS ?? '1'));
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 12) : 1;
 };
 
 /**

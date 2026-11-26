@@ -60,7 +60,7 @@ def main():
     fake = Path(tempfile.mkdtemp()) / 'matriculados.json'
     fake.write_text(json.dumps(FAKE, ensure_ascii=False))
     env = {**os.environ, 'PORT': str(PORT), 'MATRICULA_MODE': 'cpsf', 'CPSF_DATA': str(fake),
-           'TRIAL_MONTHS': '3', 'MEMBERSHIP_PRICE_ARS': '15000', 'MP_MODE': 'live', 'DATABASE_URL': ''}
+           'TRIAL_MONTHS': '1', 'MEMBERSHIP_PRICE_ARS': '15000', 'MP_MODE': 'live', 'DATABASE_URL': ''}
     app = subprocess.Popen(['npx', 'next', 'start', '-p', str(PORT)], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(60):
@@ -132,14 +132,16 @@ def main():
 
             pg.get_by_role('button', name='Continuar').last.click(); pg.wait_for_timeout(300)
             pages['asociar2'] = pg.evaluate(CAPTURE)
-            # Prueba real de la subida del título en el sitio (no solo en la vista previa)
-            pg.locator('input[type=file]').nth(1).set_input_files(files=[{'name': 'titulo.pdf', 'mimeType': '', 'buffer': b'%PDF-1.4 x'}])
-            pg.wait_for_timeout(300)
-            assert 'titulo.pdf' in pg.locator('main').inner_text(), 'la subida del título no funciona'
+            t2 = pg.locator('main').inner_text()
+            assert 'Subí tu título' not in t2 and 'Título profesional' not in t2, 'el paso 2 ya no debe pedir el título'
+            assert 'Instagram' in t2 and 'Facebook' in t2 and 'LinkedIn' in t2 and 'WhatsApp' in t2, 'faltan las redes en el paso 2'
+            assert pg.locator('input[type=file]').count() == 1, 'solo debe quedar el archivo de la foto'
             pg.locator('input[type=checkbox]').last.check()
             pg.get_by_role('button', name='Continuar').click(); pg.wait_for_timeout(400)
             assert 'Hoy pagás' in pg.locator('main').inner_text(), 'no llegó al paso 3'
-            assert 'Empezá tu suscripción gratis hoy!' in pg.locator('main').inner_text(), 'falta el botón de suscripción gratis'
+            t3 = pg.locator('main').inner_text()
+            assert 'Empezá tu suscripción gratis hoy!' in t3, 'falta el botón de suscripción gratis'
+            assert '1 mes' in t3 and '3 meses' not in t3, 'la prueba debe ser de 1 mes'
             pages['asociar3'] = pg.evaluate(CAPTURE)
 
             fill_step1(pg, lic='99999')
@@ -158,7 +160,7 @@ def main():
             pg.get_by_role('button', name='Continuar').click(); pg.wait_for_timeout(300)
             dlg['notice_other'] = dialog_html(pg)
             pg.get_by_role('button', name='Entendido').click(); pg.wait_for_timeout(800)
-            assert 'Subí tu título' in pg.locator('main').inner_text(), 'con matrícula de otra provincia debería poder continuar'
+            assert 'Sumá tu foto' in pg.locator('main').inner_text(), 'con matrícula de otra provincia debería poder continuar'
             br.close()
 
         css = css.replace('</style', '<\\/style')

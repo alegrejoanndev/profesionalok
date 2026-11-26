@@ -1,6 +1,6 @@
 # ProfesionalesOk
 
-**Directorio de psicólogas y psicólogos con suscripción mensual y 3 meses gratis.** La matrícula se verifica automáticamente contra la lista de matriculados del Colegio de Psicólogos de la Provincia de Santa Fe (https://www.cpsf.org.ar/matriculados) **antes del pago**; las matrículas de otras provincias siguen y las verifica el dueño de la plataforma. Un perfil se publica solo si la matrícula está aprobada y la suscripción está al día. Si un débito automático de Mercado Pago falla, el perfil se oculta solo y el profesional recibe un mail para regularizarlo.
+**Directorio de psicólogas y psicólogos con suscripción mensual y 1 mes gratis.** La matrícula se verifica automáticamente contra la lista de matriculados del Colegio de Psicólogos de la Provincia de Santa Fe (https://www.cpsf.org.ar/matriculados) **antes del pago**; las matrículas de otras provincias siguen y las verifica el dueño de la plataforma. Un perfil se publica solo si la matrícula está aprobada y la suscripción está al día. Si un débito automático de Mercado Pago falla, el perfil se oculta solo y el profesional recibe un mail para regularizarlo.
 
 > profesionalesok.com.ar · *Todos en un solo lugar.*
 
@@ -21,7 +21,7 @@
 | Contacto | `/contacto` |
 | Términos legales (borrador a completar) | `/terminos` |
 | Regularizar suscripción (link del mail de baja) | `/regularizar/<token>` |
-| Panel interno: revisar títulos, destacar, suspender | `/admin` |
+| Panel interno: revisar matrículas, destacar, suspender | `/admin` |
 | Simulador de Mercado Pago (solo pruebas) | `/dev/mp-simulador` |
 | Webhook de Mercado Pago | `/api/webhooks/mercadopago` |
 | Chequeo periódico de matrículas (para un programador de tareas) | `/api/cron/revalidar` |
@@ -60,16 +60,16 @@ Con `MP_MODE="mock"` (el valor por defecto) el pago se hace en un **simulador** 
 
 #### Recorrido para probarlo
 
-1. En `/asociar` completá el alta. Con una matrícula de otra provincia el alta sigue y queda para revisión manual. En el paso 3 se ven los **3 meses gratis**, "Hoy pagás $0" y la fecha del primer cobro.
+1. En `/asociar` completá el alta. Con una matrícula de otra provincia el alta sigue y queda para revisión manual. En el paso 3 se ve el **mes gratis**, "Hoy pagás $0" y la fecha del primer cobro.
 2. Al tocar *Continuar* en el paso 1 aparece el cartel **"Antes de continuar"** (se verifica CONTRA el padrón). Si la matrícula no figura o no coincide **no se llega al pago**: podés *Corregir mis datos* o *Darme de baja*. **Verificación de matrícula (simulador):** con `MATRICULA_MODE="mock"`, una matrícula que **empieza con 9** y un DNI cualquiera se verifican y el perfil se aprueba solo; con **0** figura "no habilitada"; cualquier otra "no figura" y **frena el alta antes del pago**. El DNI o CUIT es obligatorio.
-3. En el simulador de pagos tocá **1. Autorizar la suscripción**: empiezan los 3 meses gratis y el perfil se activa (sin ningún cobro). Si la matrícula quedó aprobada, ya aparece en el directorio.
-4. Si no se aprobó sola, entrá a `/admin` (usuario `admin` y tu `ADMIN_PASSWORD`), abrí el título y tocá **Aprobar**.
+3. En el simulador de pagos tocá **1. Autorizar la suscripción**: empieza el mes gratis y el perfil se activa (sin ningún cobro). Si la matrícula quedó aprobada, ya aparece en el directorio.
+4. Si no se aprobó sola, entrá a `/admin` (usuario `admin` y tu `ADMIN_PASSWORD`), revisá la matrícula y tocá **Aprobar**.
 5. Tocá **2. Cobrar (terminó la prueba)** para simular el primer cobro, o **Rechazar un cobro**: el perfil desaparece y el mail con el link para regularizar queda en `.emails/`.
 6. Abrí ese link, pagá de nuevo y el perfil vuelve solo. Regularizar **no** da otro mes gratis.
 
 ## Mes gratis
 
-- La **primera suscripción de cada profesional** incluye `TRIAL_MONTHS` meses gratis (por defecto 3; `0` lo desactiva). Se usa el parámetro `free_trial` de la API de suscripciones de Mercado Pago.
+- La **primera suscripción de cada profesional** incluye `TRIAL_MONTHS` meses gratis (por defecto 1; `0` lo desactiva). Se usa el parámetro `free_trial` de la API de suscripciones de Mercado Pago.
 - El profesional carga su medio de pago pero **no se le cobra** durante la prueba. El primer débito ocurre al terminar. Si cancela antes, no paga nada (y el perfil se da de baja).
 - El perfil se **activa al autorizarse la suscripción**, no al primer cobro (sin prueba, sí espera al primer cobro).
 - **Por única vez**: la prueba se otorga una sola vez por profesional (y una matrícula no puede registrarse dos veces). Quien cancela o cae por falta de pago y vuelve a suscribirse no recibe otra prueba.
@@ -90,7 +90,7 @@ Por defecto (`MATRICULA_MODE="cpsf"`) se compara contra la **lista de matriculad
 
 | Caso | Qué pasa |
 |---|---|
-| Matrícula de **Santa Fe** que figura en la lista y el nombre coincide | Verificada. El perfil queda para que una persona mire el título y lo apruebe (con `MATRICULA_AUTO_APPROVE="always"` se aprueba solo). |
+| Matrícula de **Santa Fe** que figura en la lista y el nombre coincide | Verificada y se aprueba sola (con `MATRICULA_AUTO_APPROVE="never"` queda para revisión manual). |
 | Santa Fe, **no figura** o el nombre **no coincide** | **No deja continuar** al pago: puede corregir los datos o darse de baja. |
 | Matrícula de **otra provincia** | Deja continuar; queda anotado en `/admin` para que el dueño de la plataforma la verifique a mano. |
 
@@ -136,7 +136,7 @@ En `/admin`, el botón **Verificar matrícula** repite la consulta de un perfil 
 
 El sitio usa **por defecto el link `https://mpago.la/1TeHYiV`** (está en `lib/site.ts`, `paymentLink`): al terminar el alta, el profesional va a ese link para suscribirse. Para usar otro link, definí `MP_SUBSCRIPTION_LINK` en `.env`.
 
-Con el link, el precio y los 3 meses gratis los define el **plan** de ese link en tu panel (ponelo en `MP_LINK_HAS_TRIAL="false"` si no tiene prueba). Límites a tener en cuenta:
+Con el link, el precio y el mes gratis los define el **plan** de ese link en tu panel (ponelo en `MP_LINK_HAS_TRIAL="false"` si no tiene prueba). Límites a tener en cuenta:
 - Tiene que ser un link de **suscripción** (con cobro recurrente), no un link de pago único.
 - El pago se asocia al profesional **por el email**: tiene que pagar con el mismo email con el que se registró. Si no coincide, el pago aparece en `/admin` como "sin vincular" y lo vinculás a mano.
 - Sigue necesitando `MP_ACCESS_TOKEN` y el webhook configurado.
@@ -152,7 +152,7 @@ Todas están documentadas en [`.env.example`](.env.example). Las principales:
 | `DATABASE_URL` | Base PostgreSQL. Vacía = modo demo. |
 | `ADMIN_USER` / `ADMIN_PASSWORD` | Acceso a `/admin`. Sin contraseña el panel queda deshabilitado. |
 | `MP_MODE` | `mock` (simulador) o `live` (Mercado Pago real). |
-| `TRIAL_MONTHS` | Meses de prueba gratis (por defecto 3; 0 = sin prueba). |
+| `TRIAL_MONTHS` | Meses de prueba gratis (por defecto 1; 0 = sin prueba). |
 | `MP_SUBSCRIPTION_LINK` | Opcional: otro link de suscripción (por defecto `https://mpago.la/1TeHYiV`; vacío = un checkout por profesional con la API). |
 | `MATRICULA_MODE` | `off`, `mock` (simulador) o `refeps` (registro oficial). |
 | `SISA_USER` / `SISA_PASSWORD` | Credenciales de servicios web del SISA (modo `refeps`). |
@@ -190,14 +190,14 @@ npm test                 # las dos anteriores
 ## Despliegue
 
 - **Hosting:** necesita Node.js y PostgreSQL. Funciona en un VPS, Render, Railway, Fly.io, etc.
-- **Archivos subidos:** las fotos y los títulos se guardan en `storage/` (disco local). En hosting **sin disco permanente** (Vercel, por ejemplo) se perderían: cambiá las 4 funciones de [`lib/storage.ts`](lib/storage.ts) por S3, Cloudflare R2 o Supabase Storage.
+- **Archivos subidos:** las fotos (y los títulos de altas anteriores) se guardan en `storage/` (disco local). En hosting **sin disco permanente** (Vercel, por ejemplo) se perderían: cambiá las 4 funciones de [`lib/storage.ts`](lib/storage.ts) por S3, Cloudflare R2 o Supabase Storage.
 - **Webhook de Mercado Pago:** en *Tus integraciones → Webhooks* cargá `https://TU-DOMINIO/api/webhooks/mercadopago` y activá *Planes y suscripciones* y *Pagos*.
 
 ## Antes de publicar en producción
 
 - [ ] `MP_MODE="live"`, credenciales y precio reales. Probar primero en el sandbox de Mercado Pago y confirmar: (1) que la suscripción con `free_trial` se crea y que el primer cobro se programa al terminar la prueba, y (2) los campos de `/authorized_payments/{id}` que lee `lib/billing.ts`.
 - [ ] **Matrículas:** conseguir las credenciales del SISA, probar con `npm run matricula:probar` y recién entonces `MATRICULA_MODE="refeps"`. Programar `/api/cron/revalidar`. Mientras tanto (`off`) todo pasa por revisión manual.
-- [ ] Si usás el link de suscripción: confirmar que es de suscripción recurrente y que el plan tiene los 3 meses gratis.
+- [ ] Si usás el link de suscripción: confirmar que es de suscripción recurrente y que el plan tiene 1 mes gratis.
 - [ ] `ADMIN_PASSWORD` larga (o reemplazar el panel por un login real).
 - [ ] Completar los datos entre [CORCHETES] de `/terminos` y **hacerlos revisar por un abogado** (datos de salud: Ley 25.326).
 - [ ] Reemplazar los testimonios de ejemplo (`app/page.tsx`) por reales.
@@ -237,4 +237,10 @@ npx next build
 python3 scripts/build-preview.py   # requiere: pip install playwright, y Chrome instalado
 ```
 
-El generador recorre el sitio real y comprueba por el camino que la subida del título, la verificación de matrícula y el paso de los 3 meses gratis funcionan.
+El generador recorre el sitio real y comprueba por el camino que el paso de foto y redes (sin título), la verificación de matrícula y el paso del mes gratis funcionan.
+
+## Términos y condiciones, redes y datos legales
+
+- Los términos y la política de privacidad están en [`app/terminos/page.tsx`](app/terminos/page.tsx). Los datos del operador se cargan con `LEGAL_NAME`, `LEGAL_CUIT`, `LEGAL_ADDRESS`, `LEGAL_TAXES` y `MEMBERSHIP_PRICE_ARS`; mientras falten, la página muestra el texto entre corchetes. Al cambiar el texto, actualizá `TERMS_VERSION` y `TERMS_UPDATED` en [`lib/site.ts`](lib/site.ts).
+- Cada perfil puede mostrar WhatsApp, Instagram, Facebook y LinkedIn (opcionales). Si no sube foto, se usa el logo de la marca.
+- Al actualizar una base existente corré `npm run db:push` para crear las columnas nuevas de redes.

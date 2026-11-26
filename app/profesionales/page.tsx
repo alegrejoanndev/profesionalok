@@ -60,7 +60,7 @@ export default async function DirectorioPage({ searchParams }: Props) {
     <>
       <PageHeader
         title="Directorio de psicólogos"
-        intro="Todos los perfiles tienen su matrícula y su título controlados antes de publicarse."
+        intro="Todos los perfiles tienen su matrícula verificada."
       />
 
       <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">

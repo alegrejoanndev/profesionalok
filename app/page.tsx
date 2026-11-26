@@ -21,8 +21,8 @@ const VALUE_ITEMS: { icon: LucideIcon; seal: string; title: string; text: string
   {
     icon: BadgeCheck,
     seal: COLORS.aqua,
-    title: 'Matrícula y título controlados',
-    text: 'Verificamos la matrícula y revisamos la documentación de cada profesional antes de publicar su perfil.',
+    title: 'Matrícula verificada',
+    text: 'Verificamos la matrícula de cada profesional antes de publicar su perfil.',
   },
   {
     icon: MessageCircle,
@@ -62,7 +62,7 @@ const TESTIMONIALS = [
 
 const stepsFor = (trial: number) => [
   { title: 'Tus datos', text: 'Matrícula, especialidades, edades que atendés y modalidad. Verificamos tu matrícula antes del pago.' },
-  { title: 'Tu documentación', text: 'Foto de perfil (opcional) y foto o PDF de tu título.' },
+  { title: 'Tu foto y tus redes', text: 'Foto de perfil (opcional; si no, usamos el logo) y tus redes: WhatsApp, Instagram, Facebook y LinkedIn.' },
   {
     title: 'Tu suscripción mensual',
     text: trial > 0 ? `${trial === 1 ? 'Primer mes gratis' : `Primeros ${trial} meses gratis`}, por única vez. Recién después, débito automático con Mercado Pago.` : 'Pagás con Mercado Pago, con débito automático mensual.',
@@ -84,10 +84,10 @@ export default async function HomePage() {
           <div>
             <p className="font-serif text-xl italic text-ink-soft">{SITE.tagline}</p>
             <h1 className="mt-3 font-display text-[clamp(3.4rem,9.5vw,6.75rem)] leading-[.92] tracking-wide">
-              Encontrá al psicólogo o la psicóloga que necesitás
+              Encontrá el profesional de la salud mental.
             </h1>
             <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-ink-soft">
-              Cada perfil tiene su matrícula y su título controlados antes de publicarse.
+              Cada perfil tiene su matrícula verificada.
             </p>
 
             <div className="mt-8 max-w-2xl">

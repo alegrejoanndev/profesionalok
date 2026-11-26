@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AGE_GROUP_VALUES, MODALITY_VALUES, cleanCustomOption } from './catalog';
 import { DEFAULT_PROFESSION, getProfession } from './professions';
+import { SOCIALS, normalizeSocial } from './socials';
 
 export const PROVINCES = [
   'Buenos Aires', 'Ciudad Autónoma de Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
@@ -47,6 +48,16 @@ export const onboardingSchema = z
       .string()
       .trim()
       .refine((v) => normalizeArPhone(v) !== null, 'Ingresá código de área y número, sin 0 ni 15 (ej: 3482 440552)'),
+    /** WhatsApp propio (opcional): si se deja vacío, el botón de contacto usa el teléfono de arriba. */
+    whatsapp: z
+      .string()
+      .trim()
+      .refine((v) => v === '' || normalizeArPhone(v) !== null, 'Ingresá código de área y número, sin 0 ni 15 (ej: 3482 440552)')
+      .optional()
+      .default(''),
+    instagram: z.string().trim().max(200).optional().default(''),
+    facebook: z.string().trim().max(200).optional().default(''),
+    linkedin: z.string().trim().max(200).optional().default(''),
     profession: z.string().default(DEFAULT_PROFESSION).refine((s) => !!getProfession(s), 'Profesión no válida'),
     licenses: z.record(z.string(), z.string().trim().max(30)).default({}),
     licenseProvince: z.string().refine((s) => PROVINCES.includes(s), 'Elegí la provincia que emitió tu matrícula'),
@@ -87,6 +98,12 @@ export const onboardingSchema = z
         v[k] = [...new Set(clean as string[])];
       }
     }
+    // Redes: se acepta el usuario o el enlace y se guarda siempre el enlace https de esa red
+    for (const { kind, label } of SOCIALS) {
+      const n = normalizeSocial(kind, v[kind]);
+      if (n === null) ctx.addIssue({ code: 'custom', path: [kind], message: `Revisá el enlace o el usuario de ${label}` });
+      else v[kind] = n;
+    }
     for (const lic of prof?.licenses ?? []) {
       const val = (v.licenses[lic.type] ?? '').trim();
       if (lic.required && !val) {
@@ -110,5 +127,4 @@ export type ContactInput = z.infer<typeof contactSchema>;
 
 export const FILE_LIMITS = {
   photo: { maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp'] }, // la foto es opcional
-  title: { maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
 } as const;

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 const ACTIONS = [
-  { action: 'authorize', label: '1. Autorizar la suscripción', hint: 'El profesional carga su tarjeta. Si tiene mes gratis, el perfil se activa ahora (y se publica si el título está aprobado).', style: 'bg-aqua hover:bg-lime' },
+  { action: 'authorize', label: '1. Autorizar la suscripción', hint: 'El profesional carga su tarjeta. Si tiene mes gratis, el perfil se activa ahora (y se publica si la matrícula está verificada).', style: 'bg-aqua hover:bg-lime' },
   { action: 'approve', label: '2. Cobrar (terminó la prueba)', hint: 'Simula un cobro aprobado. Sin mes gratis, es lo que activa el perfil.', style: 'bg-lime hover:bg-aqua' },
   { action: 'reject', label: 'Rechazar un cobro', hint: 'Baja lógica inmediata + mail con link para regularizar.', style: 'bg-pink hover:bg-lavender' },
   { action: 'reject_final', label: 'Rechazar el último reintento', hint: 'Se cancela la suscripción + mail de cancelación.', style: 'bg-lavender hover:bg-pink' },

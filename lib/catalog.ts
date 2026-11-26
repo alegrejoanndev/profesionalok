@@ -50,7 +50,7 @@ export const ALL_APPROACHES = [...new Set(Object.values(APPROACHES).flat())];
 // ───────────── Obras sociales y prepagas ─────────────
 export const PARTICULAR = 'Particular (sin obra social)';
 export const OBRAS_SOCIALES = [
-  PARTICULAR,
+  PARTICULAR, 'Reintegro',
   'PAMI', 'IAPOS (Santa Fe)', 'Incluir Salud', 'IOMA (Buenos Aires)', 'APROSS (Córdoba)', 'OSEP (Mendoza)',
   'INSSSEP (Corrientes)', 'IOSFA (Fuerzas Armadas y de Seguridad)', 'OSPJN (Poder Judicial de la Nación)',
   'OSDE', 'Swiss Medical', 'Galeno', 'Medifé', 'Sancor Salud', 'Omint', 'Jerárquicos Salud', 'Accord Salud',

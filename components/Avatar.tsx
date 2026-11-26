@@ -1,4 +1,4 @@
-import { Seal } from './Seal';
+import { BURBUJA_PATH, BURBUJA_VIEWBOX } from '@/lib/brand-paths';
 import { COLORS, type Tone } from '@/lib/colors';
 
 const BG: Record<Tone, string> = {
@@ -8,19 +8,12 @@ const BG: Record<Tone, string> = {
   lavender: 'bg-lavender',
 };
 
-/** El logo de la marca (sello con tilde). Se usa cuando el profesional no sube foto. */
+/** El logo de la marca (la burbuja "Pok" de ProfesionalesOK). Se usa cuando el profesional no sube foto. */
 export function LogoMark({ className = '' }: { className?: string }) {
   return (
-    <Seal className={className} fill={COLORS.paper}>
-      <path
-        d="M33 51 L45 63 L68 37"
-        fill="none"
-        stroke={COLORS.ink}
-        strokeWidth="8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </Seal>
+    <svg viewBox={BURBUJA_VIEWBOX} className={className} aria-hidden="true" focusable="false">
+      <path d={BURBUJA_PATH} fill={COLORS.aqua} fillRule="evenodd" />
+    </svg>
   );
 }
 
@@ -38,14 +31,14 @@ type AvatarProps = {
 export function Avatar({ name, photoUrl, tone = 'aqua', className = '' }: AvatarProps) {
   return (
     <span
-      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full ring-1 ring-ink/10 ${BG[tone]} ${className}`}
+      className={`relative grid shrink-0 place-items-center overflow-hidden rounded-full ring-1 ring-ink/10 ${photoUrl ? BG[tone] : 'bg-paper'} ${className}`}
     >
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photoUrl} alt={`Foto de ${name}`} className="h-full w-full object-cover" loading="lazy" />
       ) : (
         <>
-          <LogoMark className="h-[62%] w-[62%]" />
+          <LogoMark className="h-[66%] w-[66%]" />
           <span className="sr-only">{name} (sin foto: se muestra el logo de ProfesionalesOk)</span>
         </>
       )}

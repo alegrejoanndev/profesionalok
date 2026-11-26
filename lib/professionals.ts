@@ -16,6 +16,10 @@ export type PublicProfessional = {
   licenseNumber: string;
   photoUrl: string | null;
   phone: string; // solo dígitos, formato internacional (ej: 5493482...)
+  whatsapp: string | null; // WhatsApp propio (si falta, se usa `phone`)
+  instagram: string | null; // enlaces https a la red del profesional
+  facebook: string | null;
+  linkedin: string | null;
   specialties: string[];
   corrientes: string[];
   ageGroups: string[];
@@ -35,6 +39,10 @@ const publicColumns = {
   licenseNumber: professionals.licenseNumber,
   photoUrl: professionals.photoUrl,
   phone: professionals.phone,
+  whatsapp: professionals.whatsapp,
+  instagram: professionals.instagram,
+  facebook: professionals.facebook,
+  linkedin: professionals.linkedin,
   specialties: professionals.specialties,
   corrientes: professionals.corrientes,
   ageGroups: professionals.ageGroups,
@@ -44,21 +52,24 @@ const publicColumns = {
 
 /**
  * Regla de visibilidad pública (una sola definición, usala en todas las consultas):
- * suscripción al día + título aprobado + sin borrado lógico.
+ * suscripción al día + matrícula verificada (aprobado) + sin borrado lógico.
  */
 export const publicWhere = () =>
   and(eq(professionals.status, 'ACTIVE'), eq(professionals.verificationStatus, 'APPROVED'), isNull(professionals.deletedAt));
 
 // Datos FICTICIOS para ver el diseño sin base de datos. Se usan solo si no hay DATABASE_URL.
-type DemoExtra = Pick<PublicProfessional, 'specialties' | 'corrientes' | 'ageGroups' | 'modalidad' | 'obrasSociales'>;
+type DemoExtra = Pick<PublicProfessional, 'specialties' | 'corrientes' | 'ageGroups' | 'modalidad' | 'obrasSociales'> &
+  Partial<Pick<PublicProfessional, 'instagram' | 'facebook' | 'linkedin'>>;
 const mk = (
   n: number, firstName: string, lastName: string, profession: string, city: string, extra: DemoExtra,
 ): PublicProfessional => ({
   id: `demo-${n}`, slug: `demo-${n}`, firstName, lastName, profession, city, province: 'Santa Fe',
-  licenseType: 'MP', licenseNumber: String(1000 + n * 137), photoUrl: null, phone: `54934820000${n}0`, ...extra,
+  licenseType: 'MP', licenseNumber: String(1000 + n * 137), photoUrl: null, phone: `54934820000${n}0`,
+  whatsapp: null, instagram: null, facebook: null, linkedin: null, ...extra,
 });
 const DEMO: PublicProfessional[] = [
   mk(1, 'Lucía', 'Fernández', 'psicologia', 'Reconquista', {
+    instagram: 'https://www.instagram.com/lucia.psicologia', linkedin: 'https://www.linkedin.com/in/lucia-fernandez',
     specialties: ['Psicología clínica', 'Ansiedad y estrés'], corrientes: ['Cognitivo-conductual (TCC)'],
     ageGroups: ['adolescentes', 'adultos'], modalidad: 'AMBAS', obrasSociales: ['IAPOS (Santa Fe)', 'OSDE', 'Particular (sin obra social)'],
   }),
@@ -67,6 +78,7 @@ const DEMO: PublicProfessional[] = [
     ageGroups: ['adolescentes', 'adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)'],
   }),
   mk(3, 'Carolina', 'Ruiz', 'psicologia', 'Villa Ocampo', {
+    instagram: 'https://www.instagram.com/carolina.ruiz.psi', facebook: 'https://www.facebook.com/carolinaruizpsicologia',
     specialties: ['Infancias', 'Terapia familiar'], corrientes: ['Sistémica'],
     ageGroups: ['ninos', 'adolescentes'], modalidad: 'ONLINE', obrasSociales: ['Particular (sin obra social)'],
   }),

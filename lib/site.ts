@@ -15,7 +15,21 @@ export const SITE = {
 } as const;
 
 /** Versión de los términos que acepta el profesional. Subila cuando cambies el texto legal. */
-export const TERMS_VERSION = '2026-10-borrador-2';
+export const TERMS_VERSION = '2026-11-26';
+/** Fecha que se muestra como "Última actualización" en los términos (cambiala junto con TERMS_VERSION). */
+export const TERMS_UPDATED = '26 de noviembre de 2026';
+
+/**
+ * Datos legales del operador del sitio, que aparecen en los términos. Se completan con variables de entorno
+ * (LEGAL_NAME, LEGAL_CUIT, LEGAL_ADDRESS, LEGAL_TAXES y MEMBERSHIP_PRICE_ARS); mientras falte alguna, se ve el texto entre corchetes.
+ */
+export const LEGAL = {
+  operator: process.env.LEGAL_NAME || '[RAZÓN SOCIAL / NOMBRE Y APELLIDO]',
+  cuit: process.env.LEGAL_CUIT || '[XX-XXXXXXXX-X]',
+  address: process.env.LEGAL_ADDRESS || '[DOMICILIO]',
+  taxes: process.env.LEGAL_TAXES || '[IMPUESTOS INCLUIDOS / NO INCLUIDOS]',
+  price: Number(process.env.MEMBERSHIP_PRICE_ARS) > 0 ? new Intl.NumberFormat('es-AR').format(Number(process.env.MEMBERSHIP_PRICE_ARS)) : '[MONTO]',
+};
 
 export const NAV_LINKS = [
   { href: '/', label: 'Inicio' },

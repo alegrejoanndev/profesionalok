@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   title: { default: `${SITE.name} — Psicólogos con matrícula verificada`, template: `%s · ${SITE.name}` },
   description:
-    'Directorio de psicólogas y psicólogos. Cada perfil tiene su matrícula y su título controlados antes de publicarse.',
+    'Directorio de psicólogas y psicólogos. Cada perfil tiene su matrícula verificada.',
   openGraph: { siteName: SITE.name, locale: 'es_AR', type: 'website' },
 };
 

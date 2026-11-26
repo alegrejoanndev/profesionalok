@@ -113,7 +113,7 @@
     input.value='';
   }
 
-  /* ---------- alta: subida del título / foto ---------- */
+  /* ---------- alta: subida de la foto ---------- */
   var TYPES={pdf:1,jpg:1,jpeg:1,png:1,webp:1};
   function onFile(inp){
     var lab=inp.closest('label'),f=inp.files&&inp.files[0];if(!lab)return;
@@ -162,13 +162,11 @@
     if(/^Agregar/.test(txt)&&/^asociar/.test(k||'')){addChip(b);return}
     if(k==='asociar'&&/^Continuar/.test(txt)){openDialog();return}
     if(k==='asociar2'&&/^Continuar/.test(txt)){
-      var fi=page('asociar2').querySelectorAll('input[type=file]'),last=fi[fi.length-1],ok=!!(last&&last.closest('label')&&last.closest('label').parentNode.querySelector('[data-pv-file][role=status]'));
-      if(!ok){say('Subí el archivo de tu título (JPG, PNG, WebP o PDF) para continuar.');return}
       go('asociar3');return;
     }
     if(k==='asociar2'&&/Volver/.test(txt)){go('asociar');return}
     if(k==='asociar3'&&/Volver/.test(txt)){go('asociar2');return}
-    if(k==='asociar3'){say('Vista previa: acá se abre Mercado Pago. Son 3 meses gratis: hoy no se cobra nada.');return}
+    if(k==='asociar3'){say('Vista previa: acá se abre Mercado Pago. Es 1 mes gratis: hoy no se cobra nada.');return}
     if(/^asociar/.test(k||'')){say('Vista previa: esto funciona al ejecutar el proyecto.');return}
   });
 

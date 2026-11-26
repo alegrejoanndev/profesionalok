@@ -7,13 +7,13 @@ import { trialMonths } from '@/lib/mercadopago';
 export const metadata: Metadata = { title: '¡Gracias por sumarte!', robots: { index: false } };
 
 const itemsFor = (trial: number) => [
-  { icon: Clock, title: 'Revisamos tu matrícula y tu título', text: 'Las matrículas de Santa Fe ya se consultaron en el padrón del Colegio de Psicólogos antes del pago. Las de otras provincias las verifica una persona del equipo. En todos los casos revisamos tu título (uno o dos días hábiles).' },
+  { icon: Clock, title: 'Verificamos tu matrícula', text: 'Las matrículas de Santa Fe ya se verificaron con la lista del Colegio de Psicólogos antes del pago. Las de otras provincias las verifica una persona del equipo (uno o dos días hábiles).' },
   {
     icon: BadgeCheck,
     title: trial > 0 ? (trial === 1 ? 'Empieza tu mes gratis' : `Empiezan tus ${trial} meses gratis`) : 'Se acredita tu primer cobro',
     text: trial > 0 ? 'Mercado Pago nos avisa cuando autorizás tu medio de pago. Durante la prueba no se te cobra.' : 'Mercado Pago nos avisa apenas se procesa el pago.',
   },
-  { icon: Mail, title: 'Tu perfil se publica', text: 'Cuando la matrícula y el título están aprobados y tu suscripción activa, tu perfil aparece en el directorio.' },
+  { icon: Mail, title: 'Tu perfil se publica', text: 'Cuando la matrícula está verificada y tu suscripción activa, tu perfil aparece en el directorio.' },
 ];
 
 export default function GraciasPage() {

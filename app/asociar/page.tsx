@@ -17,7 +17,7 @@ export default function AsociarPage() {
     <>
       <PageHeader
         title="Suma tu perfil de psicólogo/a"
-        intro={trialMonths() > 0 ? `Completá tus datos, subí tu título y empezá tus ${trialText()} gratis. Son tres pasos y tarda menos de cinco minutos.` : 'Completá tus datos, subí tu título y activá tu suscripción. Son tres pasos y tarda menos de cinco minutos.'}
+        intro={trialMonths() > 0 ? `Completá tus datos, sumá tu foto y tus redes y empezá ${trialMonths() === 1 ? 'tu mes' : `tus ${trialText()}`} gratis. Son tres pasos y tarda menos de cinco minutos.` : 'Completá tus datos, sumá tu foto y tus redes y activá tu suscripción. Son tres pasos y tarda menos de cinco minutos.'}
         tone="text-aqua"
       />
       <div className="px-5 py-12 sm:px-8">

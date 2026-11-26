@@ -351,7 +351,6 @@ async function main() {
     // ═════════════════════════ ALTA COMPLETA + MATRÍCULA ═════════════════════════
     console.log('\nAlta completa con validación de matrícula (simulador)');
     const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
-    const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');
     const onboard = async (lic: string, dni: string, opts: { photo?: boolean; extra?: Record<string, unknown> } = {}) => {
       const t = crypto.randomBytes(3).toString('hex');
       const fd = new FormData();
@@ -359,10 +358,9 @@ async function main() {
         firstName: 'Ana', lastName: `Alta${t}`, email: `onb+${t}@example.com`, phone: '3482 440552', profession: 'psicologia',
         licenses: { MP: lic }, licenseProvince: 'Santa Fe', city: `Ciudadtest${t}`, province: 'Santa Fe', bio: '', dni, acceptTerms: true,
         specialties: ['Psicología clínica', 'Duelo y pérdidas'], corrientes: ['Gestalt'], ageGroups: ['adolescentes', 'adultos'],
-        modalidad: 'AMBAS', obrasSociales: ['PAMI', 'Obra social inventada'], ...opts.extra,
+        modalidad: 'AMBAS', obrasSociales: ['Reintegro', 'PAMI', 'Obra social inventada'], ...opts.extra,
       }));
       if (opts.photo !== false) fd.set('photo', new Blob([PNG], { type: 'image/png' }), 'foto.png');
-      fd.set('title', new Blob([PDF], { type: 'application/pdf' }), 'titulo.pdf');
       mpState.bodies.length = 0;
       const res = await fetch(`${BASE}/api/onboarding`, { method: 'POST', body: fd, headers: { 'x-forwarded-for': `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` } });
       const json = (await res.json()) as { initPoint?: string; matricula?: string | { status: string; blocking: boolean }; error?: string; fieldErrors?: Record<string, string> };
@@ -377,7 +375,13 @@ async function main() {
     check('el DNI NO se guardó en ninguna columna', !JSON.stringify(ok1.row).includes('12345678'));
     check('se guardan especialidades (varias), corriente, rango etario, modalidad y obras sociales',
       JSON.stringify(ok1.row?.specialties) === JSON.stringify(['Psicología clínica', 'Duelo y pérdidas']) && JSON.stringify(ok1.row?.corrientes) === '["Gestalt"]' &&
-      JSON.stringify(ok1.row?.ageGroups) === '["adolescentes","adultos"]' && ok1.row?.modalidad === 'AMBAS' && JSON.stringify(ok1.row?.obrasSociales) === '["PAMI","Obra social inventada"]', JSON.stringify(ok1.row));
+      JSON.stringify(ok1.row?.ageGroups) === '["adolescentes","adultos"]' && ok1.row?.modalidad === 'AMBAS' && JSON.stringify(ok1.row?.obrasSociales) === '["Reintegro","PAMI","Obra social inventada"]', JSON.stringify(ok1.row));
+    check('sin título: no se pide ni se guarda ningún archivo de título', ok1.row?.titleDocPath === null);
+    check('las redes vacías quedan en null y sin foto se usa el logo (photoPath null)', ok1.row?.instagram === null && ok1.row?.facebook === null && ok1.row?.linkedin === null && ok1.row?.whatsapp === null);
+    const soc = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { whatsapp: '3482 111222', instagram: '@mi.consulta', facebook: 'https://facebook.com/mi.consulta', linkedin: 'linkedin.com/in/ana-test' } });
+    check('las redes se normalizan a enlaces https y el WhatsApp a formato internacional', soc.res.status === 200 && soc.row?.instagram === 'https://www.instagram.com/mi.consulta' && soc.row?.facebook === 'https://www.facebook.com/mi.consulta' && soc.row?.linkedin === 'https://www.linkedin.com/in/ana-test' && soc.row?.whatsapp === '5493482111222', JSON.stringify(soc.row) + JSON.stringify(soc.json));
+    const socBad = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { instagram: 'https://sitio-malo.com/x' } });
+    check('un enlace de otro sitio en Instagram se rechaza', socBad.res.status === 400 && !!socBad.json.fieldErrors?.instagram && !socBad.row, JSON.stringify(socBad.json));
     check('el checkout se creó CON mes gratis', JSON.stringify(ok1.body?.auto_recurring?.free_trial) === JSON.stringify({ frequency: 1, frequency_type: 'months' }), JSON.stringify(ok1.body));
     const subOk = (await get(ok1.row!.id)).s;
     check('la suscripción nace con prueba y sin activar el perfil todavía', subOk.hasTrial === true && ok1.row?.status === 'PENDING_PAYMENT');
