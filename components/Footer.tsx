@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { Seal } from './Seal';
-import { Wordmark } from './Wordmark';
+import { Logo } from './Logo';
 import { COLORS } from '@/lib/colors';
 import { NAV_LINKS, SITE } from '@/lib/site';
 
@@ -9,19 +8,7 @@ export function Footer() {
     <footer className="bg-ash text-ink">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[1.2fr_1fr]">
         <div>
-          <div className="flex items-center gap-2.5">
-            <Seal className="h-9 w-9 text-paper">
-              <path
-                d="M33 51 L45 63 L68 37"
-                fill="none"
-                stroke={COLORS.ink}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Seal>
-            <Wordmark className="text-[1.65rem]" />
-          </div>
+          <Logo className="h-11 w-auto" color={COLORS.ink} />
           <p className="mt-3 font-serif text-lg italic">{SITE.tagline}</p>
           <p className="mt-5 max-w-md text-sm leading-relaxed">
             Los datos personales y de salud se tratan conforme a la Ley 25.326 de Protección de los

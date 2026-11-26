@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Seal } from './Seal';
-import { Wordmark } from './Wordmark';
+import { Logo } from './Logo';
 import { COLORS } from '@/lib/colors';
 import { CTA, NAV_LINKS, SITE } from '@/lib/site';
 
@@ -35,19 +35,7 @@ export function Navbar() {
       <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 py-1.5 sm:px-8">
         {/* Marca */}
         <Link href="/" className="group flex min-w-0 items-center gap-2.5" aria-label={`${SITE.name} — inicio`}>
-          <Seal
-            className="hidden h-8 w-8 shrink-0 text-aqua transition-transform duration-500 group-hover:rotate-[24deg] min-[380px]:block sm:h-9 sm:w-9"
-          >
-            <path
-              d="M33 51 L45 63 L68 37"
-              fill="none"
-              stroke={COLORS.ink}
-              strokeWidth="8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Seal>
-          <Wordmark className="text-[1.2rem] min-[400px]:text-[1.35rem] sm:text-[1.65rem]" />
+          <Logo className="h-9 w-auto max-w-[62vw] transition-transform duration-300 group-hover:-translate-y-0.5 sm:h-12" />
         </Link>
 
         {/* Links (escritorio) */}
