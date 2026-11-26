@@ -1,6 +1,6 @@
 # ProfesionalesOk
 
-**Directorio de psicólogas y psicólogos con suscripción mensual y 3 meses gratis.** La matrícula se verifica automáticamente contra el padrón del Colegio de Psicólogos de la Provincia de Santa Fe (https://www.cpsf.org.ar/matriculados) **antes del pago**; las matrículas de otras provincias siguen y las verifica el dueño de la plataforma. Un perfil se publica solo si la matrícula está aprobada y la suscripción está al día. Si un débito automático de Mercado Pago falla, el perfil se oculta solo y el profesional recibe un mail para regularizarlo.
+**Directorio de psicólogas y psicólogos con suscripción mensual y 3 meses gratis.** La matrícula se verifica automáticamente contra la lista de matriculados del Colegio de Psicólogos de la Provincia de Santa Fe (https://www.cpsf.org.ar/matriculados) **antes del pago**; las matrículas de otras provincias siguen y las verifica el dueño de la plataforma. Un perfil se publica solo si la matrícula está aprobada y la suscripción está al día. Si un débito automático de Mercado Pago falla, el perfil se oculta solo y el profesional recibe un mail para regularizarlo.
 
 > profesionalesok.com.ar · *Todos en un solo lugar.*
 
@@ -86,16 +86,27 @@ Si actualizás una instalación existente, corré `npm run db:push` para crear l
 
 ## Verificación automática de matrículas
 
-Por defecto (`MATRICULA_MODE="cpsf"`) consulta el **padrón del Colegio de Psicólogos de Santa Fe**: el sitio lee el listado completo de matriculados (https://www.cpsf.org.ar/matriculados), guarda una copia (memoria + tabla `cpsf_snapshot`) y la actualiza una vez por día con `GET /api/cron/cpsf` (con `Authorization: Bearer $CRON_SECRET`).
+Por defecto (`MATRICULA_MODE="cpsf"`) se compara contra la **lista de matriculados del Colegio de Psicólogos de Santa Fe**, guardada en el proyecto (`data/matriculados.json`, 2.565 matriculados, generada desde el Excel del Colegio). No se consulta ningún sitio externo ni hace falta configurar nada.
 
 | Caso | Qué pasa |
 |---|---|
-| Matrícula de **Santa Fe** que figura y el nombre coincide | Verificada. El perfil queda para que una persona mire el título y lo apruebe (con `MATRICULA_AUTO_APPROVE="always"` se aprueba solo). |
-| Santa Fe, **no figura** o el nombre **no coincide** o figura con baja/suspensión | **No deja continuar** al pago: puede corregir los datos o darse de baja. |
-| Santa Fe y el sitio del Colegio **no responde** | No deja continuar (`MATRICULA_ON_UNAVAILABLE="allow"` lo deja pasar a revisión manual). |
+| Matrícula de **Santa Fe** que figura en la lista y el nombre coincide | Verificada. El perfil queda para que una persona mire el título y lo apruebe (con `MATRICULA_AUTO_APPROVE="always"` se aprueba solo). |
+| Santa Fe, **no figura** o el nombre **no coincide** | **No deja continuar** al pago: puede corregir los datos o darse de baja. |
 | Matrícula de **otra provincia** | Deja continuar; queda anotado en `/admin` para que el dueño de la plataforma la verifique a mano. |
 
-Antes de salir a producción corré **una vez** `npm run cpsf:probar` (opcional: `-- 1234` para buscar una matrícula): muestra qué filas lee del sitio real. Si no lee filas, hay que ajustar `parseCpsfHtml()` en `lib/cpsf.ts` a la estructura real de la página.
+Las matrículas pueden ser numéricas (`2254`) o con prefijo R (`R6493`); se ignoran ceros a la izquierda, mayúsculas y guiones, y si se escribe solo el número y no existe se prueba con la R. El nombre se compara sin tildes y en cualquier orden.
+
+### Actualizar la lista de matriculados
+
+Cuando el Colegio publique altas nuevas, pedí el Excel actualizado (hoja `Matriculados` con `Mat. Nº | Apellido y Nombres | Localidad`) y corré:
+
+```bash
+pip install openpyxl
+python3 scripts/importar-matriculados.py ruta/al/psicologos_matriculados.xlsx
+git add data/matriculados.json && git commit -m "Actualizar matriculados" && git push
+```
+
+Un psicólogo recién matriculado que todavía no esté en la lista no podrá continuar hasta que se actualice el archivo.
 
 Alternativa con el **REFEPS** (`MATRICULA_MODE="refeps"`; Red Federal de Registros de Profesionales de la Salud, del SISA / Ministerio de Salud) y compara nombre, matrícula, profesión, provincia y estado (habilitada).
 

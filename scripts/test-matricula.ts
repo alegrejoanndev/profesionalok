@@ -3,14 +3,14 @@
  *
  *  1. Comparación de datos (nombre, matrícula, profesión, provincia, estado): casos normales y de suplantación.
  *  2. Lectura de respuestas de SISA con distintas formas.
- *  3. Padrón del Colegio de Psicólogos de Santa Fe (CPSF) contra una página falsa local: lectura del HTML,
- *     coincidencias, otra provincia, caídas del sitio.
+ *  3. Lista de matriculados del Colegio de Psicólogos de Santa Fe (data/matriculados.json): coincidencias,
+ *     matrículas con prefijo R, otra provincia.
  *  4. Consulta real por HTTP a un "SISA falso" local: credenciales, DNI, búsqueda por apellido,
  *     tiempos de espera y errores. NO usa el registro oficial ni necesita credenciales ni base de datos.
  */
 import http from 'node:http';
 import { gateResponse } from '../lib/matricula-gate';
-import { parseCpsfHtml, resetCpsfCache } from '../lib/cpsf';
+import { cpsfTotal, lookupCpsf, normalizeLicense, resetCpsfCache } from '../lib/cpsf';
 import {
   cpsfNameMatches,
   evaluateRecords,
@@ -158,80 +158,37 @@ async function main() {
   process.env.SISA_PASSWORD = 'secreto';
 
 
-  // ═════════ 3b. Padrón del Colegio de Psicólogos de Santa Fe (CPSF) ═════════
-  console.log('\nPadrón del Colegio de Psicólogos de Santa Fe');
-  const filas = Array.from({ length: 60 }, (_, i) => {
-    const n = i + 1;
-    if (n === 1234 % 60 + 1) return null; // (se reemplaza abajo)
-    return [String(n), `APELLIDO${n} NOMBRE${n}`, 'Rosario', '', 'OSDE'];
-  });
-  const especiales: Record<number, string[]> = {
-    7: ['1234', 'GÓMEZ, ANA MARÍA', 'Reconquista', '', 'OSDE'],
-    8: ['0777', 'Suspendida Lucía', 'Rosario', 'Baja por solicitud', ''],
-    9: ['0456', 'Benítez Martín', 'Avellaneda &amp; zona', '', ''],
-  };
-  const todas = filas.map((f, i) => especiales[i] ?? f ?? ['59', 'X Y', '', '', '']).map((r, i) => (i < 6 ? [String(i + 1), ...r.slice(1)] : r));
-  const tablaHtml = (rows: string[][]) =>
-    `<html><body><table class="table"><thead><tr><th>Mat. Nº</th><th>Apellido y Nombres</th><th>Localidad</th><th>Observación</th><th>O. Social</th></tr></thead><tbody>` +
-    rows.map((r) => `<tr>${r.map((c) => `<td>${c.replace('á', '&aacute;')}</td>`).join('')}</tr>`).join('') +
-    `</tbody></table><a href="/matriculados/25">siguiente</a></body></html>`;
-  let cpsfHits = 0;
-  const cpsfServer = http.createServer((req, res) => {
-    cpsfHits++;
-    const m = /\/matriculados(?:\/(\d+))?$/.exec(new URL(req.url ?? '/', 'http://x').pathname);
-    if (!m) { res.statusCode = 404; return res.end('no'); }
-    const offset = Number(m[1] ?? 0);
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(tablaHtml(todas.slice(offset, offset + 25)));
-  });
-  await new Promise<void>((ok) => cpsfServer.listen(4021, ok));
-  Object.assign(process.env, { MATRICULA_MODE: 'cpsf', CPSF_URL: 'http://localhost:4021/matriculados', CPSF_TIMEOUT_MS: '800' });
+  // ═════════ 3b. Lista de matriculados del Colegio de Psicólogos de Santa Fe ═════════
+  console.log('\nLista de matriculados (Colegio de Psicólogos de Santa Fe)');
+  process.env.MATRICULA_MODE = 'cpsf';
   resetCpsfCache();
-
-  const filasLeidas = parseCpsfHtml(tablaHtml(todas.slice(0, 25)));
-  check('lee las 25 filas de una página y descarta el encabezado', filasLeidas.length === 25 && filasLeidas[0].numero === '1', String(filasLeidas.length));
-  check('decodifica acentos y entidades HTML', parseCpsfHtml(tablaHtml(todas.slice(0, 25))).length === 25 && parseCpsfHtml(tablaHtml([todas[9]]))[0].localidad === 'Avellaneda & zona');
-  check('una página sin tabla → 0 filas (no rompe)', parseCpsfHtml('<html><body>Mantenimiento</body></html>').length === 0);
-  check('nombre en cualquier orden: "Gómez, Ana María" ← Ana Gómez', cpsfNameMatches({ firstName: 'Ana', lastName: 'Gomez' }, 'GÓMEZ, ANA MARÍA'));
+  check('la lista trae los 2565 matriculados del Excel', cpsfTotal() === 2565, String(cpsfTotal()));
+  check('normaliza matrículas: "01234"→"1234", "r-6493"→"R6493"', normalizeLicense('01234') === '1234' && normalizeLicense('r-6493') === 'R6493');
+  check('nombre en cualquier orden: "Gómez, Ana María" ← Ana Gomez', cpsfNameMatches({ firstName: 'Ana', lastName: 'Gomez' }, 'GÓMEZ, ANA MARÍA'));
   check('nombre distinto no coincide', !cpsfNameMatches({ firstName: 'Lucía', lastName: 'Gomez' }, 'GÓMEZ, ANA MARÍA'));
 
-  const gomez: MatriculaInput = { firstName: 'Ana María', lastName: 'Gómez', profession: 'psicologia', licenseNumber: '1234', licenseProvince: 'Santa Fe' };
-  v = await validateMatricula(gomez);
-  check('Santa Fe, matrícula y nombre coinciden → VERIFIED (fuente CPSF)', v.status === 'VERIFIED' && v.source === 'CPSF' && v.method === 'name', JSON.stringify(v));
-  check('…y la identidad es "débil" (por nombre): la aprobación final la hace una persona', v.method === 'name');
-  const hitsTrasPrimera = cpsfHits;
-  check('el padrón se leyó completo (3 páginas con datos + 1 vacía)', hitsTrasPrimera >= 3, String(hitsTrasPrimera));
-  await validateMatricula(gomez);
-  check('la segunda consulta usa la copia en memoria (sin volver a pedir páginas)', cpsfHits === hitsTrasPrimera, `${cpsfHits} vs ${hitsTrasPrimera}`);
-
-  v = await validateMatricula({ ...gomez, licenseNumber: '01234' });
-  check('"01234" coincide con "1234"', v.status === 'VERIFIED', JSON.stringify(v));
-  v = await validateMatricula({ ...gomez, licenseNumber: '99999' });
+  // Registros reales del Excel: numérica con coma, numérica sin coma y con prefijo R
+  const abdala: MatriculaInput = { firstName: 'Yamila Anne', lastName: 'Abdala', profession: 'psicologia', licenseNumber: 'R6493', licenseProvince: 'Santa Fe' };
+  v = await validateMatricula(abdala);
+  check('matrícula con prefijo R (R6493) y nombre correcto → VERIFIED (fuente CPSF)', v.status === 'VERIFIED' && v.source === 'CPSF' && v.method === 'name', JSON.stringify(v));
+  v = await validateMatricula({ ...abdala, licenseNumber: '6493' });
+  check('…escribiendo solo "6493" también la encuentra', v.status === 'VERIFIED', JSON.stringify(v));
+  v = await validateMatricula({ firstName: 'Luz Analía', lastName: 'Abalos', profession: 'psicologia', licenseNumber: '2254', licenseProvince: 'Santa Fe' });
+  check('matrícula numérica (2254, "ABALOS, LUZ ANALIA") → VERIFIED', v.status === 'VERIFIED', JSON.stringify(v));
+  v = await validateMatricula({ firstName: 'Vanina Gisela', lastName: 'Abbet', profession: 'psicologia', licenseNumber: '388', licenseProvince: 'santa fe' });
+  check('nombre sin coma en la lista ("ABBET VANINA GISELA", matrícula 388) → VERIFIED', v.status === 'VERIFIED', JSON.stringify(v));
+  v = await validateMatricula({ ...abdala, licenseNumber: '00388' });
+  check('matrícula de otra persona → MISMATCH y bloquea', v.status === 'MISMATCH' && gateResponse(v).blocking === true, JSON.stringify(v));
+  v = await validateMatricula({ ...abdala, licenseNumber: '999999' });
   check('matrícula que no figura → NOT_FOUND', v.status === 'NOT_FOUND', JSON.stringify(v));
   check('…y el alta queda BLOQUEADA (ya no deja continuar con cualquier dato)', gateResponse(v).blocking === true);
-  v = await validateMatricula({ ...gomez, lastName: 'Pérez' });
-  check('matrícula de otra persona → MISMATCH y bloquea', v.status === 'MISMATCH' && gateResponse(v).blocking === true, JSON.stringify(v));
-  v = await validateMatricula({ firstName: 'Lucía', lastName: 'Suspendida', profession: 'psicologia', licenseNumber: '777', licenseProvince: 'Santa Fe' });
-  check('observación "Baja" → NOT_ENABLED y bloquea', v.status === 'NOT_ENABLED' && gateResponse(v).blocking === true, JSON.stringify(v));
+  v = await validateMatricula({ ...abdala, firstName: 'Pedro', lastName: 'Pérez' });
+  check('matrícula válida con nombre inventado → MISMATCH y bloquea', v.status === 'MISMATCH' && gateResponse(v).blocking === true);
+  check('lookup con basura no rompe', lookupCpsf('') .length === 0 && lookupCpsf('abc').length === 0);
 
-  const antes = cpsfHits;
-  v = await validateMatricula({ ...gomez, licenseNumber: '555555', licenseProvince: 'Córdoba' });
+  v = await validateMatricula({ ...abdala, licenseProvince: 'Córdoba' });
   check('matrícula de OTRA provincia → se puede continuar (NOT_CHECKED, no bloquea)', v.status === 'NOT_CHECKED' && v.note === 'other_province' && gateResponse(v).blocking === false, JSON.stringify(v));
-  check('…y no se consulta el padrón de Santa Fe', cpsfHits === antes);
   check('…con un mensaje que explica que lo verifica el equipo', /otra provincia/i.test(gateResponse(v).message) && /equipo/i.test(gateResponse(v).message));
-
-  // El sitio del Colegio no responde
-  cpsfServer.close();
-  resetCpsfCache();
-  process.env.CPSF_URL = 'http://localhost:4021/matriculados';
-  v = await validateMatricula(gomez);
-  check('el sitio del Colegio no responde → UNAVAILABLE y bloquea (no se avanza sin comprobar)', v.status === 'UNAVAILABLE' && gateResponse(v).blocking === true, JSON.stringify(v));
-  process.env.MATRICULA_ON_UNAVAILABLE = 'allow';
-  check('con MATRICULA_ON_UNAVAILABLE="allow" no bloquea (queda para revisión manual)', gateResponse(v).blocking === false);
-  delete process.env.MATRICULA_ON_UNAVAILABLE;
-  v = await validateMatricula({ ...gomez, licenseProvince: 'Entre Ríos' });
-  check('caída del Colegio + otra provincia → igual se puede continuar', v.status === 'NOT_CHECKED' && gateResponse(v).blocking === false);
-  resetCpsfCache();
 
   console.log('\nModos de funcionamiento');
   process.env.MATRICULA_MODE = 'mock';

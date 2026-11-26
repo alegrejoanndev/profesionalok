@@ -182,11 +182,3 @@ export const contactMessages = pgTable('contact_messages', {
 
 export type Professional = typeof professionals.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
-
-/** Copia del padrón de matriculados del Colegio de Psicólogos de Santa Fe (una sola fila, id = 1). */
-export const cpsfSnapshot = pgTable('cpsf_snapshot', {
-  id: integer('id').primaryKey(),
-  records: jsonb('records').notNull().$type<unknown[]>(),
-  total: integer('total').notNull().default(0),
-  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
-});

@@ -23,7 +23,7 @@ export function gateMessage(status: MatriculaStatusValue, note?: string): string
     case 'NOT_FOUND':
       return 'No encontramos esa matrícula en el padrón oficial. Revisá el número de matrícula y la provincia. Si tu matrícula es de otra provincia, elegila en el campo correspondiente.';
     case 'MISMATCH':
-      return 'La matrícula figura en el padrón, pero el nombre o el apellido no coinciden. Revisalos tal como figuran en tu título y en el Colegio.';
+      return 'La matrícula figura en la lista del Colegio, pero el nombre o el apellido no coinciden. Revisalos tal como figuran en tu título y en el Colegio.';
     case 'NOT_ENABLED':
       return 'La matrícula figura en el padrón, pero hoy no está habilitada. Si es un error, regularizá tu situación en tu colegio o ministerio de salud.';
     case 'UNAVAILABLE':

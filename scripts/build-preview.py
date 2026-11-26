@@ -2,7 +2,7 @@
 """
 Genera index.html: la vista previa estática del sitio (para GitHub Pages).
 
-Levanta el sitio real (compilado, sin base de datos) junto a un "padrón falso" del Colegio de Psicólogos,
+Levanta el sitio real (compilado, sin base de datos) con una lista de matriculados inventada,
 recorre las pantallas con un navegador y las guarda en UN solo archivo HTML con un mini navegador propio
 (scripts/preview.js). Los formularios de la vista previa son simulados: el sitio real corre con
 `npm run dev` o en Vercel.
@@ -10,34 +10,18 @@ recorre las pantallas con un navegador y las guarda en UN solo archivo HTML con 
 Uso:   npx next build && python3 scripts/build-preview.py
 Requiere: pip install playwright, y Chrome instalado (CHROME_PATH si no está en /usr/bin/google-chrome).
 """
-import json, os, re, subprocess, sys, threading, time, urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import json, os, re, subprocess, sys, time, urllib.request
+import tempfile
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
-PORT, CPSF_PORT = 3101, 4031
+PORT = 3101
 BASE = f'http://localhost:{PORT}'
 CHROME = os.environ.get('CHROME_PATH', '/usr/bin/google-chrome')
 
-# ───── Padrón falso del Colegio de Psicólogos de Santa Fe ─────
-ROWS = [[str(n), f'APELLIDO{n} NOMBRE{n}', 'Rosario', '', 'OSDE'] for n in range(1, 61)]
-ROWS[6] = ['1234', 'GÓMEZ, ANA MARÍA', 'Reconquista', '', 'OSDE']
-ROWS[7] = ['777', 'SUSPENDIDA LUCÍA', 'Rosario', 'Baja por solicitud', '']
-
-
-class Padron(BaseHTTPRequestHandler):
-    def log_message(self, *a):
-        pass
-
-    def do_GET(self):
-        m = re.search(r'/matriculados(?:/(\d+))?$', self.path.split('?')[0])
-        if not m:
-            self.send_response(404); self.end_headers(); return
-        o = int(m.group(1) or 0)
-        body = '<table><tbody>' + ''.join('<tr>' + ''.join(f'<td>{c}</td>' for c in r) + '</tr>' for r in ROWS[o:o + 25]) + '</tbody></table>'
-        self.send_response(200); self.send_header('Content-Type', 'text/html; charset=utf-8'); self.end_headers()
-        self.wfile.write(body.encode())
+# ───── Lista de matriculados inventada: la vista previa no usa personas reales ─────
+FAKE = [['1234', 'GÓMEZ, ANA MARÍA', 'RECONQUISTA'], ['R777', 'PÉREZ, LUCÍA', 'ROSARIO']]
 
 
 # Reescribe enlaces para el mini navegador de la vista previa y devuelve el contenido de <main>
@@ -73,9 +57,9 @@ def dialog_html(pg):
 
 
 def main():
-    srv = HTTPServer(('127.0.0.1', CPSF_PORT), Padron)
-    threading.Thread(target=srv.serve_forever, daemon=True).start()
-    env = {**os.environ, 'PORT': str(PORT), 'MATRICULA_MODE': 'cpsf', 'CPSF_URL': f'http://localhost:{CPSF_PORT}/matriculados',
+    fake = Path(tempfile.mkdtemp()) / 'matriculados.json'
+    fake.write_text(json.dumps(FAKE, ensure_ascii=False))
+    env = {**os.environ, 'PORT': str(PORT), 'MATRICULA_MODE': 'cpsf', 'CPSF_DATA': str(fake),
            'TRIAL_MONTHS': '3', 'MEMBERSHIP_PRICE_ARS': '15000', 'MP_MODE': 'live', 'DATABASE_URL': ''}
     app = subprocess.Popen(['npx', 'next', 'start', '-p', str(PORT)], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -144,7 +128,7 @@ def main():
             dlg['notice_sf'] = dialog_html(pg)
             pg.get_by_role('button', name='Entendido').click(); pg.wait_for_timeout(2500)
             dlg['result_ok'] = dialog_html(pg)
-            assert 'Matrícula verificada' in dlg['result_ok'], 'el padrón falso no verificó la matrícula 1234'
+            assert 'Matrícula verificada' in dlg['result_ok'], 'la lista inventada no verificó la matrícula 1234'
 
             pg.get_by_role('button', name='Continuar').last.click(); pg.wait_for_timeout(300)
             pages['asociar2'] = pg.evaluate(CAPTURE)
@@ -191,7 +175,6 @@ def main():
         print(f'index.html listo: {len(html) // 1024} KB', file=sys.stderr)
     finally:
         app.terminate()
-        srv.shutdown()
 
 
 main()

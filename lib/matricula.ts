@@ -17,10 +17,10 @@
  *    Sin DNI el resultado se registra, pero lo aprueba una persona.
  *
  * Modos (MATRICULA_MODE):
- *  - "cpsf":   (por defecto) padrón del Colegio de Psicólogos de Santa Fe (https://www.cpsf.org.ar/matriculados).
- *              Matrícula de Santa Fe → se busca el número en el padrón y se compara el nombre; si no figura o no coincide,
- *              NO se puede avanzar. Matrícula de OTRA provincia → no se puede consultar: se sigue y la verifica el equipo.
- *              Si el sitio del Colegio no responde, también se frena (MATRICULA_ON_UNAVAILABLE="allow" para dejar pasar).
+ *  - "cpsf":   (por defecto) lista de matriculados del Colegio de Psicólogos de Santa Fe, guardada en data/matriculados.json
+ *              (no se consulta ningún sitio externo). Matrícula de Santa Fe → se busca el número en la lista y se compara el nombre;
+ *              si no figura o no coincide, NO se puede avanzar. Matrícula de OTRA provincia → no se puede consultar:
+ *              se sigue y la verifica el equipo.
  *  - "refeps": consulta el servicio real de SISA (requiere credenciales).
  *  - "mock":   simulador para desarrollo (matrícula que empieza con 9 = verificada, con 0 = no
  *              habilitada, otra = no encontrada). Bloqueado en producción salvo ALLOW_MATRICULA_MOCK=1.
@@ -328,9 +328,6 @@ export function cpsfNameMatches(input: Pick<MatriculaInput, 'firstName' | 'lastN
   return last.every((t) => theirs.includes(t)) && first.some((t) => theirs.includes(t));
 }
 
-/** "Baja", "suspendida", "cancelada"… en la columna Observación del padrón significa que no está habilitada. */
-export const cpsfObservationBlocks = (obs: string) => /\b(baja|suspendid|cancelad|inhabilitad|fallecid|exclui|cancelacion|no habilitad)/.test(norm(obs));
-
 async function validateWithCpsf(input: MatriculaInput): Promise<MatriculaResult> {
   if (!isSantaFe(input.licenseProvince)) {
     return {
@@ -340,21 +337,14 @@ async function validateWithCpsf(input: MatriculaInput): Promise<MatriculaResult>
       note: 'other_province',
     };
   }
-  const found = await lookupCpsf(input.licenseNumber);
-  if (!found.available) {
-    return { status: 'UNAVAILABLE', detail: 'No pudimos consultar el padrón del Colegio de Psicólogos de Santa Fe.', source: 'CPSF' };
+  const found = lookupCpsf(input.licenseNumber);
+  if (found.length === 0) {
+    return { status: 'NOT_FOUND', detail: 'Ese número de matrícula no figura en la lista de matriculados del Colegio de Psicólogos de Santa Fe.', source: 'CPSF' };
   }
-  if (found.rows.length === 0) {
-    return { status: 'NOT_FOUND', detail: 'Ese número de matrícula no figura en el padrón del Colegio de Psicólogos de Santa Fe.', source: 'CPSF' };
+  if (!found.some((r) => cpsfNameMatches(input, r.nombre))) {
+    return { status: 'MISMATCH', detail: 'La matrícula figura en la lista a nombre de otra persona.', source: 'CPSF' };
   }
-  const me = found.rows.find((r) => cpsfNameMatches(input, r.nombre));
-  if (!me) {
-    return { status: 'MISMATCH', detail: 'La matrícula figura en el padrón a nombre de otra persona.', source: 'CPSF' };
-  }
-  if (cpsfObservationBlocks(me.observacion)) {
-    return { status: 'NOT_ENABLED', detail: `El padrón informa: ${me.observacion}.`, source: 'CPSF', method: 'name' };
-  }
-  return { status: 'VERIFIED', detail: 'La matrícula figura en el padrón del Colegio de Psicólogos de Santa Fe y el nombre coincide.', source: 'CPSF', method: 'name' };
+  return { status: 'VERIFIED', detail: 'La matrícula figura en la lista de matriculados del Colegio de Psicólogos de Santa Fe y el nombre coincide.', source: 'CPSF', method: 'name' };
 }
 
 /** Punto de entrada. Nunca lanza error: ante cualquier problema devuelve UNAVAILABLE (→ revisión manual). */
