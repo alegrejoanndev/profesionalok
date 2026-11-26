@@ -7,9 +7,9 @@ import { ArrowLeft, ArrowRight, BadgeCheck, CreditCard, FileText, Loader2, Lock,
 import { Avatar } from './Avatar';
 import { Seal } from './Seal';
 import {
-  AGE_GROUPS, LOCALITY_SUGGESTIONS, MODALITIES, OBRAS_SOCIALES, ageLabel, approachesFor, modalityLabel, specialtiesFor,
+  AGE_GROUPS, LOCALITY_SUGGESTIONS, MODALITIES, OBRAS_SOCIALES, ageLabel, approachesFor, cleanCustomOption, modalityLabel, specialtiesFor,
 } from '@/lib/catalog';
-import { PROFESSIONS, getProfession } from '@/lib/professions';
+import { DEFAULT_PROFESSION, getProfession } from '@/lib/professions';
 import { FILE_LIMITS, PROVINCES, onboardingSchema } from '@/lib/validation';
 
 type Values = {
@@ -33,7 +33,7 @@ type Values = {
 type Errors = Record<string, string>;
 
 const EMPTY: Values = {
-  firstName: '', lastName: '', email: '', phone: '', profession: '',
+  firstName: '', lastName: '', email: '', phone: '', profession: DEFAULT_PROFESSION,
   licenses: {}, licenseProvince: 'Santa Fe', city: '', province: 'Santa Fe', bio: '', dni: '',
   specialties: [], corrientes: [], ageGroups: [], modalidad: '', obrasSociales: [],
 };
@@ -45,6 +45,10 @@ const input =
 const errText = 'mt-1.5 block text-sm font-medium text-[#B4125A]';
 const chipBase =
   'inline-block cursor-pointer select-none rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-medium transition duration-200 hover:border-ink/40 peer-checked:border-ink peer-checked:bg-lime peer-focus-visible:outline peer-focus-visible:outline-[3px] peer-focus-visible:outline-offset-2';
+
+const TITLE_TYPES: Record<string, string> = {
+  pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+};
 
 const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
@@ -75,9 +79,12 @@ function Field({ name, label, hint, error, children }: { name: string; label: st
   );
 }
 
-/** Grupo de opciones tipo "chip": varias a la vez (checkbox) o una sola (radio). */
+/**
+ * Grupo de opciones tipo "chip": varias a la vez (checkbox) o una sola (radio).
+ * Con `otherLabel` se puede agregar una opción propia escrita a mano (queda como un chip más, que se puede destildar).
+ */
 function ChipGroup({
-  legend, hint, error, options, selected, onToggle, single = false, name,
+  legend, hint, error, options, selected, onToggle, single = false, name, otherLabel, otherPlaceholder,
 }: {
   legend: string;
   hint?: string;
@@ -87,12 +94,31 @@ function ChipGroup({
   onToggle: (value: string) => void;
   single?: boolean;
   name: string;
+  otherLabel?: string;
+  otherPlaceholder?: string;
 }) {
+  const [other, setOther] = useState('');
+  const [otherError, setOtherError] = useState('');
+  // Lo elegido que no está en la lista son las opciones agregadas a mano
+  const custom = selected.filter((x) => !options.some((o) => o.value === x));
+
+  function addOther() {
+    if (!other.trim()) return;
+    const clean = cleanCustomOption(other);
+    if (!clean) return setOtherError('Usá solo letras y números, de 2 a 60 caracteres.');
+    const known = options.find((o) => o.value.toLowerCase() === clean.toLowerCase())?.value ?? selected.find((x) => x.toLowerCase() === clean.toLowerCase());
+    if (known) {
+      if (!selected.includes(known)) onToggle(known);
+    } else onToggle(clean);
+    setOther('');
+    setOtherError('');
+  }
+
   return (
     <fieldset>
       <legend className="mb-1.5 text-sm font-medium">{legend}</legend>
       <div className="flex flex-wrap gap-2">
-        {options.map((o) => (
+        {[...options, ...custom.map((c) => ({ value: c, label: c, hint: 'Agregada por vos' }))].map((o) => (
           <label key={o.value}>
             <input
               type={single ? 'radio' : 'checkbox'}
@@ -105,6 +131,25 @@ function ChipGroup({
           </label>
         ))}
       </div>
+      {otherLabel && (
+        <div className="mt-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-full border border-ink/20 bg-white px-4 py-2 text-sm outline-none transition focus:border-ink focus:ring-4 focus:ring-aqua/40 sm:max-w-xs"
+              value={other}
+              onChange={(e) => { setOther(e.target.value); setOtherError(''); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOther(); } }}
+              placeholder={otherPlaceholder ?? 'Escribí otra'}
+              aria-label={otherLabel}
+              maxLength={60}
+            />
+            <button type="button" onClick={addOther} className="rounded-full bg-aqua px-5 py-2 text-sm font-semibold transition hover:bg-lime">
+              {otherLabel}
+            </button>
+          </div>
+          {otherError && <p className={errText}>{otherError}</p>}
+        </div>
+      )}
       {hint && !error && <p className="mt-1.5 text-sm text-ink-soft">{hint}</p>}
       {error && <p id={`err-${name}`} className={errText}>{error}</p>}
     </fieldset>
@@ -202,12 +247,13 @@ export function OnboardingForm({
   priceLabel,
   mockMode,
   trialMonths,
-  matriculaAuto,
+  registry,
 }: {
   priceLabel: string;
   mockMode: boolean;
   trialMonths: number;
-  matriculaAuto: boolean;
+  /** Con qué se verifica la matrícula: padrón del Colegio de Psicólogos de Santa Fe (cpsf), REFEPS, simulador o nada. */
+  registry: 'cpsf' | 'refeps' | 'mock' | 'off';
 }) {
   const router = useRouter();
   const uid = useId();
@@ -228,8 +274,14 @@ export function OnboardingForm({
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const profession = getProfession(v.profession);
+  // La verificación automática pide DNI solo con REFEPS; con el Colegio de Psicólogos se usa nombre + matrícula.
+  const needsDni = registry === 'refeps' || registry === 'mock';
+  // Con el Colegio de Psicólogos de Santa Fe solo se puede consultar a quienes tienen matrícula de esa provincia:
+  // las de otras provincias siguen, y las verifica el equipo antes de publicar.
+  const matriculaAuto = registry === 'cpsf' ? v.licenseProvince === 'Santa Fe' : registry !== 'off';
   const specialtyOptions = specialtiesFor(v.profession);
   const approachOptions = approachesFor(v.profession);
+  const trialLabel = trialMonths === 1 ? 'mes' : `${trialMonths} meses`;
   const firstCharge = addMonths(new Date(), trialMonths).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   // Al cambiar de paso, llevar el foco al título (accesibilidad) y subir al inicio del formulario
@@ -271,7 +323,7 @@ export function OnboardingForm({
     const r = onboardingSchema.safeParse({ ...v, acceptTerms: true });
     const next: Errors = {};
     if (!r.success) for (const i of r.error.issues) next[i.path.join('.')] ??= i.message;
-    if (matriculaAuto && !v.dni.trim()) next.dni ??= 'Ingresá tu DNI o tu CUIT para verificar tu matrícula';
+    if (needsDni && !v.dni.trim()) next.dni ??= 'Ingresá tu DNI o tu CUIT para verificar tu matrícula';
     setErrors(next);
     if (Object.keys(next).length > 0) {
       // Llevar la vista al primer error para que no quede escondido más abajo
@@ -361,12 +413,28 @@ export function OnboardingForm({
     }
   }
 
+  /** Valida y guarda el archivo del título (por el selector o por arrastrar y soltar). */
+  function chooseTitle(f: File | undefined) {
+    if (!f) return;
+    // Algunos navegadores y celulares no informan el tipo: se deduce por la extensión
+    const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
+    const byExt = TITLE_TYPES[ext];
+    const allowed = FILE_LIMITS.title.types as readonly string[];
+    const type = allowed.includes(f.type) ? f.type : byExt ?? f.type;
+    if (/^image\/hei[cf]$/.test(f.type) || ext === 'heic' || ext === 'heif') {
+      return setErrors((p) => ({ ...p, title: 'Las fotos en formato HEIC no se pueden usar. Sacá una captura de pantalla o guardala como JPG o PDF.' }));
+    }
+    if (!allowed.includes(type)) return setErrors((p) => ({ ...p, title: 'Usá una imagen JPG, PNG, WebP o un PDF' }));
+    if (f.size > FILE_LIMITS.title.maxBytes) return setErrors((p) => ({ ...p, title: `El archivo pesa ${mb(f.size)}. El máximo es 8 MB.` }));
+    if (f.size === 0) return setErrors((p) => ({ ...p, title: 'El archivo está vacío. Probá con otro.' }));
+    setTitle(type === f.type ? f : new File([f], f.name, { type }));
+    clearError('title');
+  }
+
   function onTitle(e: ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    setTitle(f);
-    clearError('title');
+    chooseTitle(f);
+    e.target.value = ''; // permite volver a elegir el mismo archivo
   }
 
   async function pay() {
@@ -420,7 +488,7 @@ export function OnboardingForm({
         <h2 ref={headingRef} tabIndex={-1} className="scroll-mt-24 text-2xl font-semibold outline-none">
           {step === 0 && 'Contanos quién sos'}
           {step === 1 && 'Subí tu título y, si querés, tu foto'}
-          {step === 2 && (trialMonths > 0 ? 'Empezá tu mes gratis' : 'Activá tu suscripción mensual')}
+          {step === 2 && (trialMonths > 0 ? `Empezá tus ${trialLabel} gratis` : 'Activá tu suscripción mensual')}
         </h2>
 
         {/* ───── Paso 1 ───── */}
@@ -443,28 +511,10 @@ export function OnboardingForm({
               </Field>
             </div>
 
-            <Field error={errors.profession} name="profession" label="Profesión">
-              <select
-                className={input}
-                value={v.profession}
-                onChange={(e) => {
-                  // Al cambiar de profesión se limpian matrículas, especialidades y corrientes de la anterior
-                  setV((p) => ({ ...p, profession: e.target.value, licenses: {}, specialties: [], corrientes: [] }));
-                  clearError('profession');
-                }}
-                {...aria('profession')}
-              >
-                <option value="">Elegí tu profesión</option>
-                {PROFESSIONS.map((p) => (
-                  <option key={p.slug} value={p.slug}>{p.label}</option>
-                ))}
-              </select>
-            </Field>
-
-            {/* Campos de matrícula: cambian según la profesión elegida */}
+            {/* Datos de matrícula */}
             {profession && (
               <div className="space-y-5 rounded-[24px] bg-mint/60 p-5">
-                <p className="text-sm font-medium">Datos de matrícula para {profession.label}</p>
+                <p className="text-sm font-medium">Datos de tu matrícula de psicología</p>
                 <div className="grid gap-5 sm:grid-cols-2">
                   {profession.licenses.map((lic) => (
                     <Field key={lic.type} error={errors[`licenses.${lic.type}`]} name={`licenses.${lic.type}`} label={`${lic.label}${lic.required ? '' : ' (opcional)'}`} hint={lic.hint}>
@@ -481,20 +531,24 @@ export function OnboardingForm({
                       {PROVINCES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                   </Field>
-                  <Field
-                    error={errors.dni}
-                    name="dni"
-                    label={`DNI o CUIT${matriculaAuto ? '' : ' (opcional)'}`}
-                    hint="Solo números, sin puntos ni guiones. Lo usamos únicamente para confirmar tu matrícula en el padrón oficial: no se guarda ni se muestra."
-                  >
-                    <input className={input} inputMode="numeric" autoComplete="off" placeholder="DNI (8 números) o CUIT (11 números)" value={v.dni} onChange={(e) => set('dni', e.target.value)} {...aria('dni')} />
-                  </Field>
+                  {needsDni && (
+                    <Field
+                      error={errors.dni}
+                      name="dni"
+                      label="DNI o CUIT"
+                      hint="Solo números, sin puntos ni guiones. Lo usamos únicamente para confirmar tu matrícula en el padrón oficial: no se guarda ni se muestra."
+                    >
+                      <input className={input} inputMode="numeric" autoComplete="off" placeholder="DNI (8 números) o CUIT (11 números)" value={v.dni} onChange={(e) => set('dni', e.target.value)} {...aria('dni')} />
+                    </Field>
+                  )}
                 </div>
                 <p className="flex items-start gap-2 text-sm text-ink-soft">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                   {matriculaAuto
-                    ? 'Antes de seguir, comprobamos tu matrícula contra el padrón oficial de profesionales de la salud (REFEPS).'
-                    : 'Una persona del equipo comprueba tu matrícula contra el padrón oficial antes de publicar tu perfil.'}
+                    ? registry === 'cpsf'
+                      ? 'Antes de seguir, comprobamos tu matrícula en el padrón del Colegio de Psicólogos de la Provincia de Santa Fe.'
+                      : 'Antes de seguir, comprobamos tu matrícula contra el padrón oficial.'
+                    : 'Tu matrícula es de otra provincia: no la podemos consultar automáticamente. Podés continuar y una persona del equipo la verifica antes de publicar tu perfil.'}
                 </p>
               </div>
             )}
@@ -504,10 +558,13 @@ export function OnboardingForm({
               <div className="space-y-6 rounded-[24px] border border-ink/10 p-5">
                 <p className="text-sm font-semibold">Cómo atendés</p>
 
-                {specialtyOptions.length > 0 && (
+                {(
                   <ChipGroup
                     name="specialties"
                     legend="Especialidades (podés elegir más de una)"
+                    hint="¿No está la tuya? Agregala vos con el botón."
+                    otherLabel="Agregar otra especialidad"
+                    otherPlaceholder="Ej: Psicogerontología"
                     error={errors.specialties}
                     options={specialtyOptions.map((s) => ({ value: s, label: s }))}
                     selected={v.specialties}
@@ -515,10 +572,13 @@ export function OnboardingForm({
                   />
                 )}
 
-                {approachOptions.length > 0 && (
+                {(
                   <ChipGroup
                     name="corrientes"
                     legend="Corriente u orientación (podés elegir más de una)"
+                    hint="¿No está la tuya? Agregala vos con el botón."
+                    otherLabel="Agregar otras"
+                    otherPlaceholder="Ej: Terapia de juego"
                     error={errors.corrientes}
                     options={approachOptions.map((s) => ({ value: s, label: s }))}
                     selected={v.corrientes}
@@ -596,7 +656,7 @@ export function OnboardingForm({
                     )}
                   </div>
                   <p className="mt-2 max-w-[44ch] text-sm text-ink-soft">
-                    Se muestra redonda en tu perfil: una foto tuya, de frente y con buena luz. Si no subís ninguna, mostramos el logo de profesionalesok.
+                    Se muestra redonda en tu perfil: una foto tuya, de frente y con buena luz. Si no subís ninguna, mostramos el logo de ProfesionalesOk.
                   </p>
                 </div>
               </div>
@@ -617,11 +677,15 @@ export function OnboardingForm({
                   </button>
                 </div>
               ) : (
-                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[24px] border-2 border-dashed border-ink/25 px-6 py-9 text-center transition hover:border-ink hover:bg-mint/40 focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2">
+                <label
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); chooseTitle(e.dataTransfer.files?.[0]); }}
+                  className="flex cursor-pointer flex-col items-center gap-2 rounded-[24px] border-2 border-dashed border-ink/25 px-6 py-9 text-center transition hover:border-ink hover:bg-mint/40 focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2"
+                >
                   <Upload className="h-7 w-7" strokeWidth={1.5} />
                   <span className="font-semibold">Elegí una foto o un PDF de tu título</span>
                   <span className="text-sm text-ink-soft">JPG, PNG, WebP o PDF · hasta 8 MB</span>
-                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={onTitle} />
+                  <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf,.jpg,.jpeg,.png,.webp" className="sr-only" onChange={onTitle} />
                 </label>
               )}
               {errors.title && <span className={errText}>{errors.title}</span>}
@@ -694,7 +758,7 @@ export function OnboardingForm({
                 {trialMonths > 0 ? (
                   <>
                     <li>Cargás tu medio de pago en Mercado Pago, pero durante la prueba no se te cobra.</li>
-                    <li>El mes gratis se otorga una sola vez por profesional.</li>
+                    <li>La prueba gratis se otorga una sola vez por profesional.</li>
                     <li>Si cancelás antes del {firstCharge}, no se te cobra nada.</li>
                     <li>Después, el débito es automático cada mes.</li>
                   </>
@@ -718,7 +782,7 @@ export function OnboardingForm({
               className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-pink px-8 py-4 text-base font-semibold transition hover:bg-lavender disabled:opacity-60"
             >
               {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-              {submitting ? 'Preparando tu pago…' : trialMonths > 0 ? 'Empezar mi mes gratis' : 'Suscribirme con Mercado Pago'}
+              {submitting ? 'Preparando tu pago…' : trialMonths > 0 ? 'Empezá tu suscripción gratis hoy!' : 'Suscribirme con Mercado Pago'}
             </button>
           </div>
         )}
@@ -754,15 +818,19 @@ export function OnboardingForm({
               <h3 id={`${uid}-gate-title`} className="mt-2 text-2xl font-semibold">Antes de continuar</h3>
               <p className="mt-3 leading-relaxed text-ink-soft">
                 {matriculaAuto ? (
-                  <>Vamos a verificar tus datos <strong className="text-ink">CONTRA el padrón oficial</strong> de profesionales de la salud (REFEPS, del Ministerio de Salud).</>
+                  registry === 'cpsf' ? (
+                    <>Vamos a verificar tus datos <strong className="text-ink">CONTRA el padrón oficial</strong> del Colegio de Psicólogos de la Provincia de Santa Fe.</>
+                  ) : (
+                    <>Vamos a verificar tus datos <strong className="text-ink">CONTRA el padrón oficial</strong> de profesionales de la salud.</>
+                  )
                 ) : (
-                  <>Una persona del equipo va a verificar tus datos <strong className="text-ink">CONTRA el padrón oficial</strong> de profesionales de la salud antes de publicar tu perfil.</>
+                  <>Tu matrícula es de otra provincia, así que una persona del equipo va a verificar tus datos <strong className="text-ink">CONTRA el padrón oficial</strong> de tu colegio antes de publicar tu perfil.</>
                 )}
               </p>
               <ul className="mt-4 space-y-2 text-sm leading-relaxed">
-                <li className="flex gap-2"><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />Tienen que coincidir tu nombre y apellido, tu profesión, tu provincia y tu número de matrícula.</li>
+                <li className="flex gap-2"><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />Tienen que coincidir tu nombre y apellido y tu número de matrícula.</li>
                 {matriculaAuto && <li className="flex gap-2"><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />Si no figura o no coincide, no vas a poder avanzar al pago: podés corregir tus datos o darte de baja.</li>}
-                <li className="flex gap-2"><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />Tu DNI o CUIT se usa solo para esta consulta: no se guarda.</li>
+                {needsDni && <li className="flex gap-2"><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />Tu DNI o CUIT se usa solo para esta consulta: no se guarda.</li>}
               </ul>
               <div className="mt-7 flex flex-wrap justify-end gap-3">
                 <button type="button" onClick={dropOut} className="rounded-full border border-ink/20 px-6 py-3 font-semibold transition hover:bg-pink/20">

@@ -19,27 +19,21 @@ const DEMO: Demo[] = [
   ['Lucía', 'Fernández', 'psicologia', 'Reconquista', '4821', true, {
     specialties: ['Psicología clínica', 'Ansiedad y estrés'], corrientes: ['Cognitivo-conductual (TCC)'],
     ageGroups: ['adolescentes', 'adultos'], modalidad: 'AMBAS', obrasSociales: ['IAPOS (Santa Fe)', 'OSDE', 'Particular (sin obra social)'] }],
-  ['Martín', 'Gómez', 'kinesiologia', 'Romang', '1177', true, {
-    specialties: ['Traumatológica', 'Deportiva'], corrientes: [],
+  ['Martín', 'Gómez', 'psicologia', 'Romang', '1177', true, {
+    specialties: ['Adolescencias', 'Adicciones'], corrientes: ['Gestalt', 'Humanista'],
     ageGroups: ['adolescentes', 'adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)'] }],
-  ['Carolina', 'Ruiz', 'nutricion', 'Villa Ocampo', '0932', true, {
-    specialties: ['Nutrición clínica', 'Nutrición infantil'], corrientes: [],
-    ageGroups: ['ninos', 'adolescentes', 'adultos'], modalidad: 'ONLINE', obrasSociales: ['Particular (sin obra social)'] }],
-  ['Julián', 'Acosta', 'odontologia', 'Reconquista', '2210', true, {
-    specialties: ['Odontopediatría', 'Ortodoncia'], corrientes: [],
-    ageGroups: ['ninos', 'adolescentes'], modalidad: 'PRESENCIAL', obrasSociales: ['IAPOS (Santa Fe)', 'Sancor Salud', 'Swiss Medical'] }],
+  ['Carolina', 'Ruiz', 'psicologia', 'Villa Ocampo', '0932', true, {
+    specialties: ['Infancias', 'Terapia familiar'], corrientes: ['Sistémica'],
+    ageGroups: ['ninos', 'adolescentes'], modalidad: 'ONLINE', obrasSociales: ['Particular (sin obra social)'] }],
+  ['Julián', 'Acosta', 'psicologia', 'Reconquista', '2210', true, {
+    specialties: ['Terapia de pareja', 'Duelo y pérdidas'], corrientes: ['Psicoanálisis lacaniano'],
+    ageGroups: ['adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['IAPOS (Santa Fe)', 'Sancor Salud', 'Swiss Medical'] }],
   ['Sofía', 'Benítez', 'psicologia', 'Avellaneda', '5543', false, {
-    specialties: ['Infancia y adolescencia', 'Terapia familiar'], corrientes: ['Sistémica', 'Psicoanalítica'],
+    specialties: ['Infancias', 'Adolescencias', 'Psicopedagogía clínica'], corrientes: ['Psicoanalítica', 'Terapia de juego'],
     ageGroups: ['ninos', 'adolescentes'], modalidad: 'AMBAS', obrasSociales: ['Incluir Salud', 'Particular (sin obra social)'] }],
-  ['Andrés', 'Molina', 'medicina', 'Villa Ocampo', '8120', false, {
-    specialties: ['Clínica médica', 'Geriatría'], corrientes: [],
-    ageGroups: ['adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)', 'OSECAC (Empleados de Comercio)'] }],
-  ['Valentina', 'Paz', 'fonoaudiologia', 'Reconquista', '0764', false, {
-    specialties: ['Lenguaje infantil', 'Voz'], corrientes: [],
-    ageGroups: ['ninos', 'adolescentes', 'adultos'], modalidad: 'AMBAS', obrasSociales: ['IAPOS (Santa Fe)'] }],
-  ['Nicolás', 'Ibarra', 'terapia-ocupacional', 'Romang', '3391', false, {
-    specialties: ['Neurodesarrollo y TEA', 'Integración sensorial'], corrientes: [],
-    ageGroups: ['ninos'], modalidad: 'PRESENCIAL', obrasSociales: ['Incluir Salud', 'PAMI'] }],
+  ['Andrés', 'Molina', 'psicologia', 'Villa Ocampo', '8120', false, {
+    specialties: ['Psicología clínica', 'Trauma y estrés postraumático'], corrientes: ['EMDR', 'Cognitivo-conductual (TCC)'],
+    ageGroups: ['adultos'], modalidad: 'AMBAS', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)', 'OSECAC (Empleados de Comercio)'] }],
 ];
 
 async function main() {

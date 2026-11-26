@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { AGE_GROUP_VALUES, MODALITY_VALUES, approachesFor, specialtiesFor } from './catalog';
-import { getProfession } from './professions';
+import { AGE_GROUP_VALUES, MODALITY_VALUES, cleanCustomOption } from './catalog';
+import { DEFAULT_PROFESSION, getProfession } from './professions';
 
 export const PROVINCES = [
   'Buenos Aires', 'Ciudad Autónoma de Buenos Aires', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes',
@@ -47,7 +47,7 @@ export const onboardingSchema = z
       .string()
       .trim()
       .refine((v) => normalizeArPhone(v) !== null, 'Ingresá código de área y número, sin 0 ni 15 (ej: 3482 440552)'),
-    profession: z.string().refine((s) => !!getProfession(s), 'Elegí tu especialidad'),
+    profession: z.string().default(DEFAULT_PROFESSION).refine((s) => !!getProfession(s), 'Profesión no válida'),
     licenses: z.record(z.string(), z.string().trim().max(30)).default({}),
     licenseProvince: z.string().refine((s) => PROVINCES.includes(s), 'Elegí la provincia que emitió tu matrícula'),
     city: text('tu ciudad', 2, 60),
@@ -67,10 +67,10 @@ export const onboardingSchema = z
       })
       .optional()
       .default(''),
-    /** Especialidades (se puede elegir más de una). */
-    specialties: z.array(z.string().trim().max(60)).max(12, 'Elegí hasta 12 especialidades').default([]),
-    /** Corrientes u orientaciones (hoy solo Psicología). */
-    corrientes: z.array(z.string().trim().max(60)).max(8, 'Elegí hasta 8 corrientes').default([]),
+    /** Especialidades: las del listado y las que el profesional agrega a mano. */
+    specialties: z.array(z.string()).max(14, 'Elegí hasta 14 especialidades').default([]),
+    /** Corrientes u orientaciones: las del listado y las que el profesional agrega a mano. */
+    corrientes: z.array(z.string()).max(10, 'Elegí hasta 10 corrientes').default([]),
     ageGroups: z.array(z.enum(AGE_GROUP_VALUES)).min(1, 'Elegí al menos un rango etario'),
     modalidad: z.enum(MODALITY_VALUES, { errorMap: () => ({ message: 'Elegí si atendés presencial, online o ambas' }) }),
     obrasSociales: z.array(z.string().trim().min(2).max(60)).max(60, 'Máximo 60 obras sociales').default([]),
@@ -78,13 +78,14 @@ export const onboardingSchema = z
   })
   .superRefine((v, ctx) => {
     const prof = getProfession(v.profession);
-    const okSpecs = specialtiesFor(v.profession);
-    if (v.specialties.some((x) => !okSpecs.includes(x))) {
-      ctx.addIssue({ code: 'custom', path: ['specialties'], message: 'Alguna especialidad no corresponde a tu profesión' });
-    }
-    const okApproaches = approachesFor(v.profession);
-    if (v.corrientes.some((x) => !okApproaches.includes(x))) {
-      ctx.addIssue({ code: 'custom', path: ['corrientes'], message: 'Alguna corriente no corresponde a tu profesión' });
+    // Se admiten opciones escritas a mano: se limpian y se rechaza lo que no parezca una especialidad.
+    for (const k of ['specialties', 'corrientes'] as const) {
+      const clean = v[k].map(cleanCustomOption);
+      if (clean.some((x) => x === null)) {
+        ctx.addIssue({ code: 'custom', path: [k], message: 'Usá solo letras y números, de 2 a 60 caracteres, en cada opción' });
+      } else {
+        v[k] = [...new Set(clean as string[])];
+      }
     }
     for (const lic of prof?.licenses ?? []) {
       const val = (v.licenses[lic.type] ?? '').trim();

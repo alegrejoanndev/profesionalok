@@ -144,7 +144,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   {p.rejectionNote && <p className="mt-2 text-sm"><strong>Motivo del rechazo:</strong> {p.rejectionNote}</p>}
                   {p.matriculaDetail && (
                     <p className="mt-2 text-sm text-ink-soft">
-                      <strong className="text-ink">Registro oficial:</strong> {p.matriculaDetail}
+                      <strong className="text-ink">Verificación de matrícula:</strong> {p.matriculaDetail}
                       {p.matriculaCheckedAt && ` (consultado el ${fmt(p.matriculaCheckedAt)}, ${p.matriculaSource ?? 'sin fuente'})`}
                     </p>
                   )}

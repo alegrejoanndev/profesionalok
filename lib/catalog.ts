@@ -24,55 +24,19 @@ export type Modality = (typeof MODALITIES)[number]['value'];
 export const MODALITY_VALUES = MODALITIES.map((m) => m.value) as [Modality, ...Modality[]];
 export const modalityLabel = (v: string) => MODALITIES.find((m) => m.value === v)?.label ?? v;
 
-// ───────────── Especialidades (se puede elegir más de una) ─────────────
+// ───────────── Especialidades (se puede elegir más de una; cada profesional puede sumar otras a mano) ─────────────
 export const SPECIALTIES: Record<string, string[]> = {
   psicologia: [
-    'Psicología clínica', 'Infancia y adolescencia', 'Terapia de pareja', 'Terapia familiar', 'Ansiedad y estrés',
+    'Infancias', 'Adolescencias', 'Psicología clínica', 'Terapia de pareja', 'Terapia familiar', 'Ansiedad y estrés',
     'Depresión', 'Duelo y pérdidas', 'Trauma y estrés postraumático', 'Adicciones', 'Trastornos de la alimentación',
     'Neuropsicología', 'Psicología forense', 'Psicología laboral', 'Psicología educacional', 'Sexología',
     'Psicooncología', 'Orientación vocacional', 'Psicología deportiva',
-  ],
-  medicina: [
-    'Clínica médica', 'Medicina general y familiar', 'Pediatría', 'Ginecología', 'Cardiología', 'Dermatología',
-    'Traumatología', 'Neurología', 'Psiquiatría', 'Endocrinología', 'Gastroenterología', 'Oftalmología',
-    'Otorrinolaringología', 'Urología', 'Neumonología', 'Reumatología', 'Geriatría', 'Medicina del deporte',
-  ],
-  nutricion: [
-    'Nutrición clínica', 'Nutrición deportiva', 'Descenso de peso y obesidad', 'Nutrición infantil', 'Diabetes',
-    'Trastornos de la conducta alimentaria', 'Alimentación vegetariana y vegana', 'Embarazo y lactancia',
-    'Celiaquía e intolerancias',
-  ],
-  kinesiologia: [
-    'Traumatológica', 'Deportiva', 'Neurológica', 'Respiratoria', 'Pediátrica', 'Suelo pélvico', 'Posturología (RPG)',
-    'Geriátrica', 'Drenaje linfático',
-  ],
-  odontologia: [
-    'Odontología general', 'Ortodoncia', 'Endodoncia', 'Implantes', 'Odontopediatría', 'Periodoncia',
-    'Cirugía bucomaxilofacial', 'Estética dental', 'Prótesis',
-  ],
-  fonoaudiologia: [
-    'Lenguaje infantil', 'Voz', 'Audiología', 'Deglución', 'Trastornos del aprendizaje', 'Fluidez (tartamudez)',
-    'Motricidad orofacial', 'Rehabilitación del habla en adultos',
-  ],
-  'terapia-ocupacional': [
-    'Neurodesarrollo y TEA', 'Integración sensorial', 'Rehabilitación física', 'Salud mental', 'Geriatría',
-    'Terapia de mano',
-  ],
-  psicopedagogia: [
-    'Dificultades de aprendizaje', 'Orientación escolar', 'Neurodesarrollo', 'Evaluación psicopedagógica', 'Apoyo escolar',
-  ],
-  obstetricia: [
-    'Control prenatal', 'Preparación para el parto', 'Posparto y lactancia', 'Salud sexual y reproductiva',
-  ],
-  enfermeria: [
-    'Enfermería a domicilio', 'Cuidados geriátricos', 'Curaciones', 'Cuidados pediátricos', 'Inyectables y vacunación',
-    'Cuidados paliativos',
   ],
 };
 export const specialtiesFor = (profession: string) => SPECIALTIES[profession] ?? [];
 export const ALL_SPECIALTIES = [...new Set(Object.values(SPECIALTIES).flat())];
 
-// ───────────── Corrientes (orientaciones teóricas). Hoy solo aplican a Psicología ─────────────
+// ───────────── Corrientes u orientaciones teóricas (se puede sumar otras a mano) ─────────────
 export const APPROACHES: Record<string, string[]> = {
   psicologia: [
     'Cognitivo-conductual (TCC)', 'Psicoanalítica', 'Psicoanálisis lacaniano', 'Sistémica', 'Gestalt', 'Humanista',
@@ -115,4 +79,18 @@ export function parseZonas(input: string | undefined | null): string[] {
         .filter((s) => s.length >= 2),
     ),
   ].slice(0, 6);
+}
+
+// ───────────── Opciones agregadas a mano por los profesionales ─────────────
+/** Máximo de caracteres de una especialidad o corriente escrita a mano. */
+export const CUSTOM_MAX = 60;
+/** Letras, números, espacios y signos básicos. Evita HTML, links y símbolos raros. */
+const CUSTOM_RE = /^[\p{L}\p{N}][\p{L}\p{N} .,()\-/+&'’]*$/u;
+
+/** Devuelve el texto limpio si es una opción válida escrita a mano, o null. */
+export function cleanCustomOption(input: string): string | null {
+  const t = input.replace(/\s+/g, ' ').trim();
+  if (t.length < 2 || t.length > CUSTOM_MAX) return null;
+  if (!CUSTOM_RE.test(t)) return null;
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }

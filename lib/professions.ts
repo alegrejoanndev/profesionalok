@@ -26,29 +26,14 @@ const MP: LicenseField = {
   type: 'MP',
   label: 'Matrícula provincial (M.P.)',
   required: true,
-  hint: 'La que figura en tu colegio o ministerio de salud provincial',
+  hint: 'La que figura en tu Colegio de Psicólogos (ej: Colegio de Psicólogos de Santa Fe)',
 };
 
-export const PROFESSIONS: Profession[] = [
-  { slug: 'psicologia', label: 'Psicología', licenses: [MP] },
-  {
-    slug: 'medicina',
-    label: 'Medicina',
-    licenses: [
-      MP,
-      { type: 'MN', label: 'Matrícula nacional (M.N.)', required: false },
-      { type: 'RE', label: 'Registro de especialista (R.E.)', required: false, hint: 'Si ofrecés una especialidad' },
-    ],
-  },
-  { slug: 'nutricion', label: 'Nutrición', licenses: [MP] },
-  { slug: 'kinesiologia', label: 'Kinesiología y fisioterapia', licenses: [MP] },
-  { slug: 'odontologia', label: 'Odontología', licenses: [MP] },
-  { slug: 'fonoaudiologia', label: 'Fonoaudiología', licenses: [MP] },
-  { slug: 'terapia-ocupacional', label: 'Terapia ocupacional', licenses: [MP] },
-  { slug: 'psicopedagogia', label: 'Psicopedagogía', licenses: [MP] },
-  { slug: 'obstetricia', label: 'Obstetricia', licenses: [MP] },
-  { slug: 'enfermeria', label: 'Enfermería', licenses: [MP] },
-];
+/** ProfesionalesOk está enfocado en psicólogas y psicólogos. Para sumar otra profesión, agregala acá. */
+export const PROFESSIONS: Profession[] = [{ slug: 'psicologia', label: 'Psicología', licenses: [MP] }];
+
+/** Profesión por defecto del sitio (hoy la única). */
+export const DEFAULT_PROFESSION = 'psicologia';
 
 export const getProfession = (slug: string) => PROFESSIONS.find((p) => p.slug === slug);
 

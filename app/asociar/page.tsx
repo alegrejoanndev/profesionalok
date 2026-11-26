@@ -4,6 +4,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { matriculaMode } from '@/lib/matricula';
 import { isMockMode, trialMonths } from '@/lib/mercadopago';
 
+const trialText = () => { const t = trialMonths(); return t === 1 ? '1 mes' : `${t} meses`; };
+
 export const metadata: Metadata = { title: 'Suma tu perfil' };
 export const dynamic = 'force-dynamic';
 
@@ -14,12 +16,12 @@ export default function AsociarPage() {
   return (
     <>
       <PageHeader
-        title="Suma tu perfil al directorio"
-        intro={trialMonths() > 0 ? 'Completá tus datos, subí tu título y empezá tu mes gratis. Son tres pasos y tarda menos de cinco minutos.' : 'Completá tus datos, subí tu título y activá tu suscripción. Son tres pasos y tarda menos de cinco minutos.'}
+        title="Suma tu perfil de psicólogo/a"
+        intro={trialMonths() > 0 ? `Completá tus datos, subí tu título y empezá tus ${trialText()} gratis. Son tres pasos y tarda menos de cinco minutos.` : 'Completá tus datos, subí tu título y activá tu suscripción. Son tres pasos y tarda menos de cinco minutos.'}
         tone="text-aqua"
       />
       <div className="px-5 py-12 sm:px-8">
-        <OnboardingForm priceLabel={priceLabel} mockMode={isMockMode()} trialMonths={trialMonths()} matriculaAuto={matriculaMode() !== 'off'} />
+        <OnboardingForm priceLabel={priceLabel} mockMode={isMockMode()} trialMonths={trialMonths()} registry={matriculaMode()} />
       </div>
     </>
   );

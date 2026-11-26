@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { professionals } from '@/db/schema';
-import { LOCALITY_SUGGESTIONS, parseZonas } from './catalog';
+import { ALL_APPROACHES, ALL_SPECIALTIES, LOCALITY_SUGGESTIONS, parseZonas } from './catalog';
 import { getDb, hasDatabase } from './db';
 
 /** Solo estos campos son públicos. NUNCA expongas email, titleDocPath, regularizeToken, etc. */
@@ -62,25 +62,25 @@ const DEMO: PublicProfessional[] = [
     specialties: ['Psicología clínica', 'Ansiedad y estrés'], corrientes: ['Cognitivo-conductual (TCC)'],
     ageGroups: ['adolescentes', 'adultos'], modalidad: 'AMBAS', obrasSociales: ['IAPOS (Santa Fe)', 'OSDE', 'Particular (sin obra social)'],
   }),
-  mk(2, 'Martín', 'Gómez', 'kinesiologia', 'Romang', {
-    specialties: ['Traumatológica', 'Deportiva'], corrientes: [],
+  mk(2, 'Martín', 'Gómez', 'psicologia', 'Romang', {
+    specialties: ['Adolescencias', 'Adicciones'], corrientes: ['Gestalt', 'Humanista'],
     ageGroups: ['adolescentes', 'adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)'],
   }),
-  mk(3, 'Carolina', 'Ruiz', 'nutricion', 'Villa Ocampo', {
-    specialties: ['Nutrición clínica', 'Nutrición infantil'], corrientes: [],
-    ageGroups: ['ninos', 'adolescentes', 'adultos'], modalidad: 'ONLINE', obrasSociales: ['Particular (sin obra social)'],
+  mk(3, 'Carolina', 'Ruiz', 'psicologia', 'Villa Ocampo', {
+    specialties: ['Infancias', 'Terapia familiar'], corrientes: ['Sistémica'],
+    ageGroups: ['ninos', 'adolescentes'], modalidad: 'ONLINE', obrasSociales: ['Particular (sin obra social)'],
   }),
-  mk(4, 'Julián', 'Acosta', 'odontologia', 'Reconquista', {
-    specialties: ['Odontopediatría', 'Ortodoncia'], corrientes: [],
-    ageGroups: ['ninos', 'adolescentes'], modalidad: 'PRESENCIAL', obrasSociales: ['IAPOS (Santa Fe)', 'Sancor Salud', 'Swiss Medical'],
+  mk(4, 'Julián', 'Acosta', 'psicologia', 'Reconquista', {
+    specialties: ['Terapia de pareja', 'Duelo y pérdidas'], corrientes: ['Psicoanálisis lacaniano'],
+    ageGroups: ['adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['IAPOS (Santa Fe)', 'Sancor Salud', 'Swiss Medical'],
   }),
   mk(5, 'Sofía', 'Benítez', 'psicologia', 'Avellaneda', {
-    specialties: ['Infancia y adolescencia', 'Terapia familiar'], corrientes: ['Sistémica', 'Psicoanalítica'],
+    specialties: ['Infancias', 'Adolescencias', 'Psicopedagogía clínica'], corrientes: ['Psicoanalítica', 'Terapia de juego'],
     ageGroups: ['ninos', 'adolescentes'], modalidad: 'AMBAS', obrasSociales: ['Incluir Salud', 'Particular (sin obra social)'],
   }),
-  mk(6, 'Andrés', 'Molina', 'medicina', 'Villa Ocampo', {
-    specialties: ['Clínica médica', 'Geriatría'], corrientes: [],
-    ageGroups: ['adultos'], modalidad: 'PRESENCIAL', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)', 'OSECAC (Empleados de Comercio)'],
+  mk(6, 'Andrés', 'Molina', 'psicologia', 'Villa Ocampo', {
+    specialties: ['Psicología clínica', 'Trauma y estrés postraumático'], corrientes: ['EMDR', 'Cognitivo-conductual (TCC)'],
+    ageGroups: ['adultos'], modalidad: 'AMBAS', obrasSociales: ['PAMI', 'IAPOS (Santa Fe)', 'OSECAC (Empleados de Comercio)'],
   }),
 ];
 
@@ -195,6 +195,32 @@ export async function getLocalitySuggestions(): Promise<string[]> {
       return true;
     })
     .sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+/**
+ * Especialidades y corrientes que los profesionales agregaron a mano (no están en el catálogo),
+ * para que también se puedan usar como filtro en el buscador.
+ */
+export async function getCustomOptions(): Promise<{ specialties: string[]; corrientes: string[] }> {
+  const pick = (rows: { v: string }[], base: string[]) =>
+    [...new Set(rows.map((r) => r.v))].filter((x) => !base.includes(x)).sort((a, b) => a.localeCompare(b, 'es'));
+  if (!hasDatabase()) {
+    const rows = (k: 'specialties' | 'corrientes') => DEMO.flatMap((p) => p[k]).map((v) => ({ v }));
+    return { specialties: pick(rows('specialties'), ALL_SPECIALTIES), corrientes: pick(rows('corrientes'), ALL_APPROACHES) };
+  }
+  try {
+    const db = getDb();
+    const [sp, co] = await Promise.all([
+      db.execute(sql`select distinct jsonb_array_elements_text(${professionals.specialties}) as v from ${professionals} where ${publicWhere()} limit 300`),
+      db.execute(sql`select distinct jsonb_array_elements_text(${professionals.corrientes}) as v from ${professionals} where ${publicWhere()} limit 300`),
+    ]);
+    return {
+      specialties: pick(sp.rows as { v: string }[], ALL_SPECIALTIES),
+      corrientes: pick(co.rows as { v: string }[], ALL_APPROACHES),
+    };
+  } catch {
+    return { specialties: [], corrientes: [] };
+  }
 }
 
 /** slug legible y único: ana-perez-4821 */

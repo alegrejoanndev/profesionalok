@@ -87,7 +87,7 @@ export const professionals = pgTable(
     matriculaStatus: matriculaStatus('matricula_status').notNull().default('NOT_CHECKED'),
     matriculaCheckedAt: timestamp('matricula_checked_at', { withTimezone: true }),
     matriculaDetail: text('matricula_detail'), // motivo legible (ej: "El nombre no coincide con el titular")
-    matriculaSource: text('matricula_source'), // 'REFEPS' | 'MOCK'
+    matriculaSource: text('matricula_source'), // 'CPSF' | 'REFEPS' | 'MOCK'
     refepsCode: text('refeps_code'), // código federal del profesional (dato público del registro)
     verificationMethod: text('verification_method'), // 'AUTO_REFEPS' | 'MANUAL'
 
@@ -182,3 +182,11 @@ export const contactMessages = pgTable('contact_messages', {
 
 export type Professional = typeof professionals.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
+
+/** Copia del padrón de matriculados del Colegio de Psicólogos de Santa Fe (una sola fila, id = 1). */
+export const cpsfSnapshot = pgTable('cpsf_snapshot', {
+  id: integer('id').primaryKey(),
+  records: jsonb('records').notNull().$type<unknown[]>(),
+  total: integer('total').notNull().default(0),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+});

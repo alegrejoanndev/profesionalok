@@ -14,7 +14,7 @@ const SECTIONS: { id: string; title: string; body: string[] }[] = [
     id: 'quienes-somos',
     title: '1. Quiénes somos',
     body: [
-      `${SITE.name} (${SITE.domain}) es un directorio en línea que permite a profesionales de la salud publicar su perfil y a las personas encontrarlos y contactarlos. El sitio es operado por [RAZÓN SOCIAL / NOMBRE Y APELLIDO], CUIT [XX-XXXXXXXX-X], con domicilio en [DOMICILIO], República Argentina.`,
+      `${SITE.name} (${SITE.domain}) es un directorio en línea que permite a psicólogas y psicólogos publicar su perfil y a las personas encontrarlos y contactarlos. El sitio es operado por [RAZÓN SOCIAL / NOMBRE Y APELLIDO], CUIT [XX-XXXXXXXX-X], con domicilio en [DOMICILIO], República Argentina.`,
     ],
   },
   {
@@ -30,7 +30,7 @@ const SECTIONS: { id: string; title: string; body: string[] }[] = [
     title: '3. Registro y verificación de profesionales',
     body: [
       'Para publicar un perfil, el profesional debe completar el formulario con datos verdaderos y adjuntar su título habilitante. Declara bajo su responsabilidad que la matrícula informada es propia y se encuentra vigente.',
-      'Para verificar la habilitación, consultamos la matrícula contra el padrón oficial de profesionales de la salud (REFEPS, del Sistema Integrado de Información Sanitaria Argentino) y comparamos nombre, matrícula, profesión y provincia. Esta verificación se hace ANTES del pago: si la matrícula no figura, no coincide o no está habilitada, no se habilita el pago ni se crea la suscripción, y la persona puede corregir sus datos o darse de baja. Si el padrón no puede consultarse en ese momento, el alta continúa y una persona del equipo verifica la matrícula y revisa la documentación antes de publicar el perfil. Si todo coincide, el perfil puede aprobarse automáticamente.',
+      'Para verificar la habilitación, consultamos la matrícula contra el padrón de matriculados del Colegio de Psicólogos de la Provincia de Santa Fe y comparamos el nombre y el número de matrícula. Esta verificación se hace ANTES del pago: si una matrícula de Santa Fe no figura, no coincide o no está habilitada, no se habilita el pago ni se crea la suscripción, y la persona puede corregir sus datos o darse de baja. Las matrículas de otras provincias no se pueden consultar automáticamente: el alta continúa y una persona del equipo las verifica, junto con el título, antes de publicar el perfil. En todos los casos, el perfil se publica recién después de la revisión del título y mientras la suscripción esté al día.',
       'Podemos rechazar, suspender o eliminar un perfil cuando no se pueda verificar la habilitación profesional, cuando el registro oficial informe que la matrícula ya no está habilitada, cuando la información sea falsa o engañosa, o ante incumplimientos de estos términos. Revisamos periódicamente las matrículas aprobadas.',
     ],
   },

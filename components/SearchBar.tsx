@@ -2,9 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { ChevronDown, MapPin, Search, Stethoscope } from 'lucide-react';
-import { AGE_GROUPS, ALL_APPROACHES, MODALITIES, OBRAS_SOCIALES, SPECIALTIES, approachesFor, specialtiesFor } from '@/lib/catalog';
-import { PROFESSIONS } from '@/lib/professions';
+import { ChevronDown, MapPin, Search } from 'lucide-react';
+import { AGE_GROUPS, ALL_APPROACHES, ALL_SPECIALTIES, MODALITIES, OBRAS_SOCIALES } from '@/lib/catalog';
 
 export type SearchFilters = {
   profesion?: string;
@@ -18,7 +17,18 @@ export type SearchFilters = {
 
 const select = 'w-full rounded-2xl border border-ink/15 bg-white px-4 py-2.5 text-sm text-ink outline-none transition focus:border-ink focus:ring-4 focus:ring-aqua/40';
 
-export function SearchBar({ initial = {}, localities = [] }: { initial?: SearchFilters; localities?: string[] }) {
+export function SearchBar({
+  initial = {},
+  localities = [],
+  extraSpecialties = [],
+  extraApproaches = [],
+}: {
+  initial?: SearchFilters;
+  localities?: string[];
+  /** Especialidades y corrientes que los profesionales agregaron a mano (no están en el catálogo). */
+  extraSpecialties?: string[];
+  extraApproaches?: string[];
+}) {
   const router = useRouter();
   const uid = useId();
   const [f, setF] = useState<Required<SearchFilters>>({
@@ -39,15 +49,6 @@ export function SearchBar({ initial = {}, localities = [] }: { initial?: SearchF
 
   const set = (patch: Partial<Required<SearchFilters>>) => setF((p) => ({ ...p, ...patch }));
 
-  function onProfesion(slug: string) {
-    // Si cambia la profesión, se descartan las especialidades y corrientes que ya no corresponden
-    set({
-      profesion: slug,
-      especialidad: slug && !specialtiesFor(slug).includes(f.especialidad) ? '' : f.especialidad,
-      corriente: slug && !approachesFor(slug).includes(f.corriente) ? '' : f.corriente,
-    });
-  }
-
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams();
@@ -55,33 +56,12 @@ export function SearchBar({ initial = {}, localities = [] }: { initial?: SearchF
     router.push(`/profesionales${params.size ? `?${params}` : ''}`);
   }
 
-  const specialtyOptions = f.profesion ? specialtiesFor(f.profesion) : null;
-  const showApproaches = !f.profesion || approachesFor(f.profesion).length > 0;
-  const approachOptions = f.profesion ? approachesFor(f.profesion) : ALL_APPROACHES;
+  const specialtyOptions = [...ALL_SPECIALTIES, ...extraSpecialties.filter((x) => !ALL_SPECIALTIES.includes(x))];
+  const approachOptions = [...ALL_APPROACHES, ...extraApproaches.filter((x) => !ALL_APPROACHES.includes(x))];
 
   return (
-    <form action="/profesionales" method="get" onSubmit={onSubmit} role="search" aria-label="Buscar profesionales" className="space-y-3">
-      <div className="grid gap-2 rounded-[28px] border border-ink/10 bg-white p-2 shadow-[0_20px_50px_-30px_rgba(8,34,32,.55)] transition-shadow duration-300 focus-within:shadow-[0_24px_60px_-28px_rgba(8,34,32,.7)] sm:grid-cols-[.85fr_1.4fr_auto]">
-        <label className="group flex items-center gap-3 rounded-[22px] px-4 py-2.5 transition hover:bg-mint/50 focus-within:bg-mint/50">
-          <Stethoscope className="h-5 w-5 shrink-0 text-ink-soft" strokeWidth={1.75} />
-          <span className="flex w-full flex-col">
-            <span className="text-xs font-medium text-ink-soft">Profesión</span>
-            <select
-              name="profesion"
-              value={f.profesion}
-              onChange={(e) => onProfesion(e.target.value)}
-              className="w-full bg-transparent py-0.5 text-base text-ink outline-none"
-            >
-              <option value="">Todas</option>
-              {PROFESSIONS.map((p) => (
-                <option key={p.slug} value={p.slug}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </span>
-        </label>
-
+    <form action="/profesionales" method="get" onSubmit={onSubmit} role="search" aria-label="Buscar psicólogos" className="space-y-3">
+      <div className="grid gap-2 rounded-[28px] border border-ink/10 bg-white p-2 shadow-[0_20px_50px_-30px_rgba(8,34,32,.55)] transition-shadow duration-300 focus-within:shadow-[0_24px_60px_-28px_rgba(8,34,32,.7)] sm:grid-cols-[1fr_auto]">
         <label className="group flex items-center gap-3 rounded-[22px] px-4 py-2.5 transition hover:bg-mint/50 focus-within:bg-mint/50">
           <MapPin className="h-5 w-5 shrink-0 text-ink-soft" strokeWidth={1.75} />
           <span className="flex w-full flex-col">
@@ -162,23 +142,13 @@ export function SearchBar({ initial = {}, localities = [] }: { initial?: SearchF
             <span className="mb-1 block text-xs font-medium text-ink-soft">Especialidad</span>
             <select name="especialidad" value={f.especialidad} onChange={(e) => set({ especialidad: e.target.value })} className={select}>
               <option value="">Todas</option>
-              {specialtyOptions
-                ? specialtyOptions.map((s) => <option key={s}>{s}</option>)
-                : PROFESSIONS.filter((p) => SPECIALTIES[p.slug]).map((p) => (
-                    <optgroup key={p.slug} label={p.label}>
-                      {SPECIALTIES[p.slug].map((s) => (
-                        <option key={`${p.slug}-${s}`} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
+              {specialtyOptions.map((s) => <option key={s}>{s}</option>)}
             </select>
           </label>
 
-          {showApproaches && (
+          {(
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-ink-soft">Corriente (Psicología)</span>
+              <span className="mb-1 block text-xs font-medium text-ink-soft">Corriente u orientación</span>
               <select name="corriente" value={f.corriente} onChange={(e) => set({ corriente: e.target.value })} className={select}>
                 <option value="">Todas</option>
                 {approachOptions.map((s) => <option key={s}>{s}</option>)}

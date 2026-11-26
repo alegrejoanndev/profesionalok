@@ -63,7 +63,7 @@ export function HeroStamp() {
             style={{ fontFamily: 'var(--font-poppins), system-ui, sans-serif' }}
           >
             <textPath href="#hero-seal-ring">
-              matrícula verificada • título controlado • salud con respaldo •
+              matrícula verificada • título controlado • psicólogos con respaldo •
             </textPath>
           </text>
           {/* La tilde: el "ok" del dominio. Se dibuja después de que el sello apoya. */}

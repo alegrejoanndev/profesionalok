@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
     crypto.timingSafeEqual(Buffer.from(given), Buffer.from(secret));
   if (!valid) return new NextResponse('No autorizado', { status: 401 });
   if (!hasDatabase()) return NextResponse.json({ error: 'Sin base de datos' }, { status: 503 });
-  if (matriculaMode() !== 'refeps') {
-    return NextResponse.json({ skipped: 'La validación contra el registro oficial no está activada (MATRICULA_MODE=refeps).' });
+  if (matriculaMode() !== 'refeps' && matriculaMode() !== 'cpsf') {
+    return NextResponse.json({ skipped: 'La validación contra el registro oficial no está activada (MATRICULA_MODE=cpsf o refeps).' });
   }
 
   const rows = await getDb()

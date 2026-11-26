@@ -8,7 +8,7 @@ import { onboardingSchema } from '@/lib/validation';
 export const runtime = 'nodejs';
 
 /**
- * Paso previo al pago: consulta la matrícula en el padrón oficial (REFEPS) apenas la persona completa sus datos,
+ * Paso previo al pago: consulta la matrícula en el padrón oficial (Colegio de Psicólogos de Santa Fe) apenas la persona completa sus datos,
  * antes de pedirle documentación o dinero. No guarda nada. Devuelve solo el estado y un mensaje genérico
  * (nunca datos del padrón), con límite de intentos para que no sirva para averiguar datos de terceros.
  * El alta (/api/onboarding) vuelve a verificar en el servidor: este endpoint es solo para avisar antes.
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const v = parsed.data;
 
   const mode = matriculaMode();
-  if (mode !== 'off' && !v.dni) {
+  if ((mode === 'refeps' || mode === 'mock') && !v.dni) {
     return NextResponse.json({ error: 'Revisá los datos marcados.', fieldErrors: { dni: 'Ingresá tu DNI o tu CUIT para verificar tu matrícula' } }, { status: 400 });
   }
 

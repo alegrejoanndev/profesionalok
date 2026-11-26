@@ -19,7 +19,7 @@ export const TERMS_VERSION = '2026-10-borrador-2';
 
 export const NAV_LINKS = [
   { href: '/', label: 'Inicio' },
-  { href: '/profesionales', label: 'Profesionales' },
+  { href: '/profesionales', label: 'Psicólogos' },
   { href: '/contacto', label: 'Contacto' },
   { href: '/terminos', label: 'Términos legales' },
 ] as const;

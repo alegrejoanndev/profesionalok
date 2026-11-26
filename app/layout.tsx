@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { COLORS } from '@/lib/colors';
 import { SITE } from '@/lib/site';
 
@@ -35,9 +36,9 @@ const lora = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: { default: `${SITE.name} — Profesionales de la salud con matrícula verificada`, template: `%s · ${SITE.name}` },
+  title: { default: `${SITE.name} — Psicólogos con matrícula verificada`, template: `%s · ${SITE.name}` },
   description:
-    'Directorio de profesionales de la salud. Cada perfil tiene su matrícula y su título controlados antes de publicarse.',
+    'Directorio de psicólogas y psicólogos. Cada perfil tiene su matrícula y su título controlados antes de publicarse.',
   openGraph: { siteName: SITE.name, locale: 'es_AR', type: 'website' },
 };
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <Footer />
+        <WhatsAppButton />
       </body>
     </html>
   );

@@ -5,11 +5,10 @@ import { PageHeader } from '@/components/PageHeader';
 import { SearchBar } from '@/components/SearchBar';
 import type { Tone } from '@/lib/colors';
 import { AGE_GROUPS, ALL_APPROACHES, ALL_SPECIALTIES, MODALITIES, OBRAS_SOCIALES, parseZonas } from '@/lib/catalog';
-import { getLocalitySuggestions, searchProfessionals } from '@/lib/professionals';
-import { getProfession } from '@/lib/professions';
+import { getCustomOptions, getLocalitySuggestions, searchProfessionals } from '@/lib/professionals';
 import { CTA } from '@/lib/site';
 
-export const metadata: Metadata = { title: 'Directorio de profesionales' };
+export const metadata: Metadata = { title: 'Directorio de psicólogos' };
 export const dynamic = 'force-dynamic'; // depende de los filtros de la URL
 
 const TONES: Tone[] = ['aqua', 'lime', 'lavender', 'mint'];
@@ -26,22 +25,20 @@ const clean = (v?: string, max = 80) => v?.trim().slice(0, max) || undefined;
 
 export default async function DirectorioPage({ searchParams }: Props) {
   const sp = await searchParams;
-  // Compatibilidad: antes la profesión viajaba como ?especialidad=psicologia
-  const legacy = sp.especialidad && getProfession(sp.especialidad) ? sp.especialidad : undefined;
-  const profesion = (sp.profesion && getProfession(sp.profesion) ? sp.profesion : undefined) ?? legacy;
-  const especialidad = legacy ? undefined : clean(sp.especialidad) && ALL_SPECIALTIES.includes(clean(sp.especialidad)!) ? clean(sp.especialidad) : undefined;
+  const [localities, custom] = await Promise.all([getLocalitySuggestions(), getCustomOptions()]);
+  // Se aceptan las especialidades y corrientes del catálogo y las que los profesionales agregaron a mano
+  const okSpecialties = [...ALL_SPECIALTIES, ...custom.specialties];
+  const okApproaches = [...ALL_APPROACHES, ...custom.corrientes];
+  const especialidad = clean(sp.especialidad) && okSpecialties.includes(clean(sp.especialidad)!) ? clean(sp.especialidad) : undefined;
   const edad = AGE_GROUPS.some((a) => a.value === sp.edad) ? sp.edad : undefined;
-  const corriente = clean(sp.corriente) && ALL_APPROACHES.includes(clean(sp.corriente)!) ? clean(sp.corriente) : undefined;
+  const corriente = clean(sp.corriente) && okApproaches.includes(clean(sp.corriente)!) ? clean(sp.corriente) : undefined;
   const obra = clean(sp.obra) && OBRAS_SOCIALES.includes(clean(sp.obra)!) ? clean(sp.obra) : undefined;
   const modalidad = sp.modalidad === 'PRESENCIAL' || sp.modalidad === 'ONLINE' ? sp.modalidad : undefined;
   const zona = clean(sp.zona, 120);
   const page = Math.max(1, Number.parseInt(sp.page ?? '1', 10) || 1);
 
-  const filters = { profesion, especialidad, edad, corriente, obra, modalidad, zona };
-  const [{ items, total, demo }, localities] = await Promise.all([
-    searchProfessionals({ ...filters, page, pageSize: PAGE_SIZE }),
-    getLocalitySuggestions(),
-  ]);
+  const filters = { especialidad, edad, corriente, obra, modalidad, zona };
+  const { items, total, demo } = await searchProfessionals({ ...filters, page, pageSize: PAGE_SIZE });
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const qs = (p: number) => {
     const params = new URLSearchParams();
@@ -51,7 +48,6 @@ export default async function DirectorioPage({ searchParams }: Props) {
     return `/profesionales${s ? `?${s}` : ''}`;
   };
   const active = [
-    profesion && getProfession(profesion)?.label,
     especialidad,
     edad && AGE_GROUPS.find((a) => a.value === edad)?.label,
     corriente,
@@ -63,13 +59,13 @@ export default async function DirectorioPage({ searchParams }: Props) {
   return (
     <>
       <PageHeader
-        title="Directorio de profesionales"
+        title="Directorio de psicólogos"
         intro="Todos los perfiles tienen su matrícula y su título controlados antes de publicarse."
       />
 
       <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
         <div className="max-w-3xl">
-          <SearchBar key={JSON.stringify(filters)} initial={filters} localities={localities} />
+          <SearchBar key={JSON.stringify(filters)} initial={filters} localities={localities} extraSpecialties={custom.specialties} extraApproaches={custom.corrientes} />
         </div>
 
         {demo && (
@@ -81,7 +77,7 @@ export default async function DirectorioPage({ searchParams }: Props) {
         <p className="mt-8 text-sm text-ink-soft" role="status" aria-live="polite">
           {total === 0
             ? 'Sin resultados'
-            : `${total} ${total === 1 ? 'profesional' : 'profesionales'}`}
+            : `${total} ${total === 1 ? 'psicólogo' : 'psicólogos'}`}
           {active.length > 0 && ` · ${active.join(' · ')}`}
         </p>
 
@@ -93,9 +89,9 @@ export default async function DirectorioPage({ searchParams }: Props) {
           </div>
         ) : (
           <div className="mt-4 rounded-[28px] border border-dashed border-ink/25 p-10">
-            <p className="text-lg font-semibold">No encontramos profesionales con esos filtros</p>
+            <p className="text-lg font-semibold">No encontramos psicólogos con esos filtros</p>
             <p className="mt-2 max-w-[56ch] text-ink-soft">
-              Probá con otra localidad o con menos filtros. Si sos profesional de la salud, podés sumar tu perfil.
+              Probá con otra localidad o con menos filtros. Si sos psicóloga o psicólogo, podés sumar tu perfil.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/profesionales" className="rounded-full border border-ink/20 px-6 py-3 font-semibold transition hover:bg-mint">

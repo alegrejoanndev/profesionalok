@@ -14,7 +14,7 @@ export default function ContactoPage() {
         <aside className="h-fit rounded-[28px] bg-mint p-7">
           <h2 className="text-lg font-semibold">Antes de escribir</h2>
           <ul className="mt-3 space-y-3 text-ink-soft">
-            <li>Si buscás atención de salud, contactá directamente al profesional desde su perfil.</li>
+            <li>Si buscás atención psicológica, contactá directamente al profesional desde su perfil.</li>
             <li>Si sos profesional y tu perfil no aparece, revisá tu mail: te avisamos si falló un cobro.</li>
             <li>Para urgencias médicas, llamá al servicio de emergencias de tu zona. Este sitio no brinda atención de salud.</li>
           </ul>

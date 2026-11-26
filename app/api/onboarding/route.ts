@@ -56,8 +56,8 @@ export async function POST(req: NextRequest) {
     return fail('Revisá los datos marcados.', 400, { fieldErrors });
   }
   const v = parsed.data;
-  // Con la validación automática activa, el DNI o CUIT es obligatorio: es lo que confirma que la matrícula es de quien se registra.
-  if (matriculaMode() !== 'off' && !v.dni) {
+  // Solo con REFEPS se pide DNI o CUIT (con el padrón del Colegio se compara nombre + número de matrícula).
+  if ((matriculaMode() === 'refeps' || matriculaMode() === 'mock') && !v.dni) {
     return fail('Revisá los datos marcados.', 400, { fieldErrors: { dni: 'Ingresá tu DNI o tu CUIT para verificar tu matrícula' } });
   }
 

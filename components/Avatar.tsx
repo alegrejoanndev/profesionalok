@@ -32,7 +32,7 @@ type AvatarProps = {
 };
 
 /**
- * Foto de perfil REDONDA. Es opcional: si no hay foto se muestra el logo de profesionalesok.
+ * Foto de perfil REDONDA. Es opcional: si no hay foto se muestra el logo de ProfesionalesOk.
  * El tamaño se define con className (ej: "h-20 w-20").
  */
 export function Avatar({ name, photoUrl, tone = 'aqua', className = '' }: AvatarProps) {
@@ -46,7 +46,7 @@ export function Avatar({ name, photoUrl, tone = 'aqua', className = '' }: Avatar
       ) : (
         <>
           <LogoMark className="h-[62%] w-[62%]" />
-          <span className="sr-only">{name} (sin foto: se muestra el logo de profesionalesok)</span>
+          <span className="sr-only">{name} (sin foto: se muestra el logo de ProfesionalesOk)</span>
         </>
       )}
     </span>

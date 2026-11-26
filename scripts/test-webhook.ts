@@ -364,7 +364,7 @@ async function main() {
       if (opts.photo !== false) fd.set('photo', new Blob([PNG], { type: 'image/png' }), 'foto.png');
       fd.set('title', new Blob([PDF], { type: 'application/pdf' }), 'titulo.pdf');
       mpState.bodies.length = 0;
-      const res = await fetch(`${BASE}/api/onboarding`, { method: 'POST', body: fd });
+      const res = await fetch(`${BASE}/api/onboarding`, { method: 'POST', body: fd, headers: { 'x-forwarded-for': `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}` } });
       const json = (await res.json()) as { initPoint?: string; matricula?: string | { status: string; blocking: boolean }; error?: string; fieldErrors?: Record<string, string> };
       const [row] = await db.select().from(professionals).where(eq(professionals.email, `onb+${t}@example.com`));
       if (row) createdIds.push(row.id);
@@ -426,10 +426,14 @@ async function main() {
     check('el rango etario es obligatorio', noAge.res.status === 400 && !!noAge.json.fieldErrors?.ageGroups && !noAge.row);
     const noMod = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { modalidad: '' } });
     check('la modalidad es obligatoria', noMod.res.status === 400 && !!noMod.json.fieldErrors?.modalidad);
-    const badSpec = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { specialties: ['Cardiología'] } });
-    check('una especialidad de otra profesión se rechaza', badSpec.res.status === 400 && !!badSpec.json.fieldErrors?.specialties);
-    const badCorr = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { profession: 'nutricion', corrientes: ['Gestalt'], specialties: [] } });
-    check('las corrientes solo existen para Psicología', badCorr.res.status === 400 && !!badCorr.json.fieldErrors?.corrientes);
+    const customOk = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { specialties: ['Infancias', 'Adolescencias', 'Psicogerontología'], corrientes: ['Terapia de juego'] } });
+    check('acepta "Infancias", "Adolescencias" y especialidades/corrientes agregadas a mano', customOk.res.status === 200 && JSON.stringify(customOk.row?.specialties) === JSON.stringify(['Infancias', 'Adolescencias', 'Psicogerontología']) && JSON.stringify(customOk.row?.corrientes) === JSON.stringify(['Terapia de juego']), JSON.stringify(customOk.json));
+    const badSpec = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { specialties: ['<script>alert(1)</script>'] } });
+    check('una especialidad con símbolos raros se rechaza', badSpec.res.status === 400 && !!badSpec.json.fieldErrors?.specialties && !badSpec.row);
+    const badCorr = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { corrientes: ['x'] } });
+    check('una corriente de 1 letra se rechaza', badCorr.res.status === 400 && !!badCorr.json.fieldErrors?.corrientes);
+    const badProf = await onboard(`9${crypto.randomBytes(2).toString('hex')}`, '12345678', { extra: { profession: 'nutricion' } });
+    check('solo se aceptan psicólogos (otra profesión se rechaza)', badProf.res.status === 400 && !badProf.row, JSON.stringify(badProf.json));
 
     console.log('\nBuscador: localidades múltiples y filtros');
     const dir = async (qs: string) => (await (await fetch(`${BASE}/profesionales?${qs}`)).text());

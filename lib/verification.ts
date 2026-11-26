@@ -34,6 +34,8 @@ export async function applyMatriculaResult(professionalId: string, result: Matri
     matriculaCheckedAt: now,
     matriculaDetail: result.detail,
     matriculaSource: result.source === 'NONE' ? null : result.source,
+    // Matrícula de otra provincia: queda anotado para que el dueño de la plataforma la verifique a mano
+    ...(result.note === 'other_province' ? { matriculaDetail: result.detail } : {}),
     ...(result.refepsCode ? { refepsCode: result.refepsCode } : {}),
   };
 

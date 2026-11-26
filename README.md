@@ -1,6 +1,6 @@
 # ProfesionalesOk
 
-**Directorio de profesionales de la salud con suscripción mensual y 1 mes gratis.** La matrícula se verifica contra el padrón oficial (REFEPS) **antes del pago**. Un perfil se publica solo si la matrícula está aprobada y la suscripción está al día. Si un débito automático de Mercado Pago falla, el perfil se oculta solo y el profesional recibe un mail para regularizarlo.
+**Directorio de psicólogas y psicólogos con suscripción mensual y 3 meses gratis.** La matrícula se verifica automáticamente contra el padrón del Colegio de Psicólogos de la Provincia de Santa Fe (https://www.cpsf.org.ar/matriculados) **antes del pago**; las matrículas de otras provincias siguen y las verifica el dueño de la plataforma. Un perfil se publica solo si la matrícula está aprobada y la suscripción está al día. Si un débito automático de Mercado Pago falla, el perfil se oculta solo y el profesional recibe un mail para regularizarlo.
 
 > profesionalesok.com.ar · *Todos en un solo lugar.*
 
@@ -60,16 +60,16 @@ Con `MP_MODE="mock"` (el valor por defecto) el pago se hace en un **simulador** 
 
 #### Recorrido para probarlo
 
-1. En `/asociar` completá el alta. Probá elegir *Medicina*: aparecen los campos M.N. y R.E. En el paso 3 se ve **1 mes gratis**, "Hoy pagás $0" y la fecha del primer cobro.
+1. En `/asociar` completá el alta. Con una matrícula de otra provincia el alta sigue y queda para revisión manual. En el paso 3 se ven los **3 meses gratis**, "Hoy pagás $0" y la fecha del primer cobro.
 2. Al tocar *Continuar* en el paso 1 aparece el cartel **"Antes de continuar"** (se verifica CONTRA el padrón). Si la matrícula no figura o no coincide **no se llega al pago**: podés *Corregir mis datos* o *Darme de baja*. **Verificación de matrícula (simulador):** con `MATRICULA_MODE="mock"`, una matrícula que **empieza con 9** y un DNI cualquiera se verifican y el perfil se aprueba solo; con **0** figura "no habilitada"; cualquier otra "no figura" y **frena el alta antes del pago**. El DNI o CUIT es obligatorio.
-3. En el simulador de pagos tocá **1. Autorizar la suscripción**: empieza el mes gratis y el perfil se activa (sin ningún cobro). Si la matrícula quedó aprobada, ya aparece en el directorio.
+3. En el simulador de pagos tocá **1. Autorizar la suscripción**: empiezan los 3 meses gratis y el perfil se activa (sin ningún cobro). Si la matrícula quedó aprobada, ya aparece en el directorio.
 4. Si no se aprobó sola, entrá a `/admin` (usuario `admin` y tu `ADMIN_PASSWORD`), abrí el título y tocá **Aprobar**.
 5. Tocá **2. Cobrar (terminó la prueba)** para simular el primer cobro, o **Rechazar un cobro**: el perfil desaparece y el mail con el link para regularizar queda en `.emails/`.
 6. Abrí ese link, pagá de nuevo y el perfil vuelve solo. Regularizar **no** da otro mes gratis.
 
 ## Mes gratis
 
-- La **primera suscripción de cada profesional** incluye `TRIAL_MONTHS` meses gratis (por defecto 1; `0` lo desactiva). Se usa el parámetro `free_trial` de la API de suscripciones de Mercado Pago.
+- La **primera suscripción de cada profesional** incluye `TRIAL_MONTHS` meses gratis (por defecto 3; `0` lo desactiva). Se usa el parámetro `free_trial` de la API de suscripciones de Mercado Pago.
 - El profesional carga su medio de pago pero **no se le cobra** durante la prueba. El primer débito ocurre al terminar. Si cancela antes, no paga nada (y el perfil se da de baja).
 - El perfil se **activa al autorizarse la suscripción**, no al primer cobro (sin prueba, sí espera al primer cobro).
 - **Por única vez**: la prueba se otorga una sola vez por profesional (y una matrícula no puede registrarse dos veces). Quien cancela o cae por falta de pago y vuelve a suscribirse no recibe otra prueba.
@@ -86,7 +86,18 @@ Si actualizás una instalación existente, corré `npm run db:push` para crear l
 
 ## Verificación automática de matrículas
 
-Consulta el **REFEPS** (Red Federal de Registros de Profesionales de la Salud, del SISA / Ministerio de Salud) y compara nombre, matrícula, profesión, provincia y estado (habilitada).
+Por defecto (`MATRICULA_MODE="cpsf"`) consulta el **padrón del Colegio de Psicólogos de Santa Fe**: el sitio lee el listado completo de matriculados (https://www.cpsf.org.ar/matriculados), guarda una copia (memoria + tabla `cpsf_snapshot`) y la actualiza una vez por día con `GET /api/cron/cpsf` (con `Authorization: Bearer $CRON_SECRET`).
+
+| Caso | Qué pasa |
+|---|---|
+| Matrícula de **Santa Fe** que figura y el nombre coincide | Verificada. El perfil queda para que una persona mire el título y lo apruebe (con `MATRICULA_AUTO_APPROVE="always"` se aprueba solo). |
+| Santa Fe, **no figura** o el nombre **no coincide** o figura con baja/suspensión | **No deja continuar** al pago: puede corregir los datos o darse de baja. |
+| Santa Fe y el sitio del Colegio **no responde** | No deja continuar (`MATRICULA_ON_UNAVAILABLE="allow"` lo deja pasar a revisión manual). |
+| Matrícula de **otra provincia** | Deja continuar; queda anotado en `/admin` para que el dueño de la plataforma la verifique a mano. |
+
+Antes de salir a producción corré **una vez** `npm run cpsf:probar` (opcional: `-- 1234` para buscar una matrícula): muestra qué filas lee del sitio real. Si no lee filas, hay que ajustar `parseCpsfHtml()` en `lib/cpsf.ts` a la estructura real de la página.
+
+Alternativa con el **REFEPS** (`MATRICULA_MODE="refeps"`; Red Federal de Registros de Profesionales de la Salud, del SISA / Ministerio de Salud) y compara nombre, matrícula, profesión, provincia y estado (habilitada).
 
 | Resultado | Qué pasa |
 |---|---|
@@ -114,7 +125,7 @@ En `/admin`, el botón **Verificar matrícula** repite la consulta de un perfil 
 
 El sitio usa **por defecto el link `https://mpago.la/1TeHYiV`** (está en `lib/site.ts`, `paymentLink`): al terminar el alta, el profesional va a ese link para suscribirse. Para usar otro link, definí `MP_SUBSCRIPTION_LINK` en `.env`.
 
-Con el link, el precio y el mes gratis los define el **plan** de ese link en tu panel (ponelo en `MP_LINK_HAS_TRIAL="false"` si no tiene prueba). Límites a tener en cuenta:
+Con el link, el precio y los 3 meses gratis los define el **plan** de ese link en tu panel (ponelo en `MP_LINK_HAS_TRIAL="false"` si no tiene prueba). Límites a tener en cuenta:
 - Tiene que ser un link de **suscripción** (con cobro recurrente), no un link de pago único.
 - El pago se asocia al profesional **por el email**: tiene que pagar con el mismo email con el que se registró. Si no coincide, el pago aparece en `/admin` como "sin vincular" y lo vinculás a mano.
 - Sigue necesitando `MP_ACCESS_TOKEN` y el webhook configurado.
@@ -130,7 +141,7 @@ Todas están documentadas en [`.env.example`](.env.example). Las principales:
 | `DATABASE_URL` | Base PostgreSQL. Vacía = modo demo. |
 | `ADMIN_USER` / `ADMIN_PASSWORD` | Acceso a `/admin`. Sin contraseña el panel queda deshabilitado. |
 | `MP_MODE` | `mock` (simulador) o `live` (Mercado Pago real). |
-| `TRIAL_MONTHS` | Meses de prueba gratis (por defecto 1; 0 = sin prueba). |
+| `TRIAL_MONTHS` | Meses de prueba gratis (por defecto 3; 0 = sin prueba). |
 | `MP_SUBSCRIPTION_LINK` | Opcional: otro link de suscripción (por defecto `https://mpago.la/1TeHYiV`; vacío = un checkout por profesional con la API). |
 | `MATRICULA_MODE` | `off`, `mock` (simulador) o `refeps` (registro oficial). |
 | `SISA_USER` / `SISA_PASSWORD` | Credenciales de servicios web del SISA (modo `refeps`). |
@@ -175,7 +186,7 @@ npm test                 # las dos anteriores
 
 - [ ] `MP_MODE="live"`, credenciales y precio reales. Probar primero en el sandbox de Mercado Pago y confirmar: (1) que la suscripción con `free_trial` se crea y que el primer cobro se programa al terminar la prueba, y (2) los campos de `/authorized_payments/{id}` que lee `lib/billing.ts`.
 - [ ] **Matrículas:** conseguir las credenciales del SISA, probar con `npm run matricula:probar` y recién entonces `MATRICULA_MODE="refeps"`. Programar `/api/cron/revalidar`. Mientras tanto (`off`) todo pasa por revisión manual.
-- [ ] Si usás el link de suscripción: confirmar que es de suscripción recurrente y que el plan tiene el mes gratis.
+- [ ] Si usás el link de suscripción: confirmar que es de suscripción recurrente y que el plan tiene los 3 meses gratis.
 - [ ] `ADMIN_PASSWORD` larga (o reemplazar el panel por un login real).
 - [ ] Completar los datos entre [CORCHETES] de `/terminos` y **hacerlos revisar por un abogado** (datos de salud: Ley 25.326).
 - [ ] Reemplazar los testimonios de ejemplo (`app/page.tsx`) por reales.
@@ -205,3 +216,14 @@ Las tipografías incluidas en `app/fonts/` (Poppins, Bebas Neue y Lora) se distr
 ## Licencia
 
 Este repositorio todavía no tiene una licencia: por defecto, **todos los derechos quedan reservados** y nadie más puede reutilizar el código. Si querés que otras personas puedan usarlo, agregá un archivo `LICENSE` (por ejemplo MIT, desde *Add file → Create new file → LICENSE* en GitHub).
+
+## Vista previa en GitHub Pages
+
+`index.html` (en la raíz) es una **vista previa estática** del diseño con datos de ejemplo: sirve para mirar el sitio desde GitHub Pages, pero los formularios están simulados (la matrícula `1234` de Santa Fe simula una verificación correcta). El sitio real necesita un servidor (`npm run dev`, o Vercel + Neon). Para regenerarla después de cambiar el diseño:
+
+```bash
+npx next build
+python3 scripts/build-preview.py   # requiere: pip install playwright, y Chrome instalado
+```
+
+El generador recorre el sitio real y comprueba por el camino que la subida del título, la verificación de matrícula y el paso de los 3 meses gratis funcionan.

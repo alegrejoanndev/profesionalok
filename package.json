@@ -13,6 +13,7 @@
     "test:webhook": "tsx scripts/test-webhook.ts",
     "db:check": "tsx scripts/check-db.ts",
     "matricula:probar": "tsx scripts/matricula-probar.ts",
+    "cpsf:probar": "tsx scripts/cpsf-probar.ts",
     "test:matricula": "tsx scripts/test-matricula.ts",
     "test": "npm run test:matricula && npm run test:webhook"
   },
